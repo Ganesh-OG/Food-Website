@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Contact</title>
+
+   <link rel="shortcut icon" href="images/ngplogo.jpg">
+
+   <!-- Font Awesome -->
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+   <!-- CSS -->
+   <link rel="stylesheet" href="css/style.css">
+   <link rel="stylesheet" href="css/contact.css">
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div id="headerContainer"></div>
+
+<!-- HEADING -->
+<div class="heading">
+   <h3>Contact Us</h3>
+   <p><a href="home.html">Home</a> <span> / Contact</span></p>
+</div>
+
+<!-- CONTACT -->
+<section class="contact">
+   <div class="row">
+
+      <div class="image">
+         <img id="contactImage" alt="Contact Image">
+      </div>
+
+      <form id="contactForm">
+         <h3 id="contactTitle">Tell Us Something!</h3>
+
+         <input type="text" id="name" class="box" placeholder="Enter your name" required>
+
+         <!-- PHONE -->
+         <input type="tel" id="phone" class="box"
+            placeholder="Enter your number"
+            maxlength="10"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            required>
+
+         <input type="email" id="email" class="box" placeholder="Enter your email" readonly>
+
+         <!-- MESSAGE -->
+         <div class="textarea-wrapper">
+            <textarea id="message" class="box"
+                placeholder="Enter your message"
+                maxlength="300"
+                required></textarea>
+
+            <span id="charCount" class="char-counter">0/300</span>
+         </div>
+
+         <input type="submit" value="Send Message" class="btn">
+      </form>
+
+   </div>
+</section>
+
+<!-- FOOTER -->
+<div id="footerContainer"></div>
+
+<!-- JS -->
+<script type="module" src="components/JS/header_loader.js"></script>
+<script type="module" src="components/JS/user_header.js"></script>
+<script type="module" src="components/JS/footer.js"></script>
+<script type="module" src="components/JS/contact.js"></script>
+
+</body>
+</html>

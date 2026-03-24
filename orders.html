@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Orders</title>
+
+   <link rel="shortcut icon" href="images/ngplogo.jpg">
+   <link rel="stylesheet" href="https://unpkg.com/swiper@8/swiper-bundle.min.css"/>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+   <link rel="stylesheet" href="css/orders.css">
+</head>
+
+<body style="display:flex; flex-direction:column; min-height:100vh;">
+
+<!-- HEADER -->
+<div id="headerContainer"></div>
+
+<!-- HEADING -->
+<div class="heading">
+    <h3>Orders</h3>
+    <p>Home / Orders</p>
+</div>
+
+<!-- MAIN -->
+<section class="orders" style="flex:1;">
+
+<h1 class="title">your orders</h1>
+
+<button class="orders-button" onclick="toggleButtons()">Orders</button>
+<button id="pendingBtn" style="display:none;">Pending Orders</button>
+<button id="completeBtn" style="display:none;">Completed Orders</button>
+<button id="cancelBtn" style="display:none;">Cancelled Orders</button>
+
+<div class="box-container" id="ordersContainer"></div>
+
+</section>
+
+<!-- 🔥 FOOTER -->
+<div id="footerContainer"></div>
+
+<!-- LIBS -->
+<script src="https://unpkg.com/swiper@8/swiper-bundle.min.js"></script>
+<script src="js/script.js"></script>
+
+<!-- MODULES -->
+<script type="module" src="components/JS/header_loader.js"></script>
+<script type="module" src="components/JS/user_header.js"></script>
+<script type="module" src="components/JS/footer.js"></script>
+<script type="module" src="components/JS/orders.js"></script>
+
+</body>
+</html>

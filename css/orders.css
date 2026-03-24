@@ -1,0 +1,13 @@
+/* Orders specific styles */
+.order-status[data-status="Order Pending"] { color: blue !important; }
+.order-status[data-status="Complete"] { color: green !important; }
+.order-status[data-status="Cancelled"] { color: red !important; }
+button { background-color: #cfcaca; padding: 10px; border-radius: 5px; cursor: pointer; width: calc(33.33% - 10px); text-align: center; margin: 5px 0; font-size: 14px; }
+.orders-button { width: 1135px; }
+button:hover { background-color: #89949c; }
+.box-container { display: flex; flex-wrap: wrap; justify-content: space-around; }
+.box { background-color: #f0f0f0; padding: 15px; border-radius: 8px; margin: 10px; }
+.small-item-details { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.small-item-details th, .small-item-details td { padding: 8px; text-align: center; border: 1px solid #ddd; }
+@media (max-width: 768px) { .orders-button { width: 100%; } .box { width: 100%; } }
+

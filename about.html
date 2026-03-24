@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1" />
+   <title>About Us</title>
+
+   <link rel="shortcut icon" href="images/ngplogo.jpg" />
+   <link rel="stylesheet" href="css/style.css">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+</head>
+
+<body>
+
+   <!-- 🔥 HEADER -->
+   <div id="headerContainer"></div>
+
+   <!-- HEADING -->
+   <div class="heading">
+      <h3>About Us</h3>
+      <p><a href="home.html">Home</a> <span> / About</span></p>
+   </div>
+
+   <!-- ABOUT SECTION -->
+   <section class="about">
+      <div class="row">
+         <div class="image">
+            <img id="aboutImage" src="images/about-img.svg" alt="About Image" />
+         </div>
+
+         <div class="content">
+            <h3 id="aboutTitle">why choose us?</h3>
+            <p id="aboutContent">Loading...</p>
+            <a href="menu.html" class="btn">our menu</a>
+         </div>
+      </div>
+   </section>
+
+   <!-- STEPS -->
+   <section class="steps">
+      <h1 class="title">simple steps</h1>
+      <div class="box-container" id="stepsContainer"></div>
+   </section>
+
+   <!-- 🔥 FOOTER -->
+   <div id="footerContainer"></div>
+
+   <!-- ================= MODULES ================= -->
+
+   <!-- ✅ Inject header + footer -->
+   <script type="module" src="components/JS/header_loader.js"></script>
+
+   <!-- ✅ VERY IMPORTANT (fix for your issue) -->
+   <script type="module" src="components/JS/user_header.js"></script>
+
+   <!-- ✅ Footer dynamic content -->
+   <script type="module" src="components/JS/footer.js"></script>
+
+   <!-- ✅ Page logic -->
+   <script type="module" src="components/JS/about.js"></script>
+
+</body>
+</html>

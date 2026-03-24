@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Profile</title>
+
+   <link rel="shortcut icon" href="images/ngplogo.jpg">
+   <link rel="stylesheet" href="css/style.css">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+   <style>
+      .custom-btn {
+         background-color: #007bff;
+         color: white;
+         border: none;
+         padding: 10px 20px;
+         border-radius: 4px;
+         cursor: pointer;
+      }
+
+      .custom-btn:hover {
+         background-color: #0056b3;
+      }
+   </style>
+</head>
+
+<body>
+
+<!-- 🔐 SESSION CHECK -->
+<script>
+const user = JSON.parse(localStorage.getItem("user"));
+if (!user) window.location.href = "index.html";
+</script>
+
+<!-- 🔥 HEADER -->
+<div id="headerContainer"></div>
+
+<div class="heading">
+   <h3>PROFILE</h3>
+   <p><a href="home.html">HOME</a> / PROFILE</p>
+</div>
+
+<section class="user-details">
+   <div class="user">
+
+      <img src="images/user-icon.png">
+
+      <p><i class="fas fa-user"></i> <span id="name"></span></p>
+      <p><i class="fas fa-envelope"></i> <span id="email"></span></p>
+      <p><i class="fas fa-building"></i> <span id="department"></span></p>
+      <p><i class="fas fa-id-badge"></i> <span id="id"></span></p>
+      <p><i class="fas fa-calendar-alt"></i> <span id="dob"></span></p>
+      <p><i class="fas fa-wallet"></i> <span id="balance"></span></p>
+
+      <form action="password_reset.html" style="text-align: center;">
+         <input type="submit" value="Update Password" class="custom-btn">
+      </form>
+
+   </div>
+</section>
+
+<!-- 🔥 FOOTER -->
+<div id="footerContainer"></div>
+
+<!-- MODULES -->
+<script type="module" src="components/JS/profile.js"></script>
+<script type="module" src="components/JS/user_header.js"></script>
+<script type="module" src="components/JS/footer.js"></script>
+
+</body>
+</html>

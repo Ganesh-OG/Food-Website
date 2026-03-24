@@ -1,0 +1,191 @@
+/* ===== CONTACT LAYOUT ===== */
+.contact .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    align-items: center;
+}
+
+.contact .row .image {
+    flex: 1 1 40rem;
+}
+
+.contact .row .image img {
+    width: 100%;
+}
+
+.contact .row form {
+    flex: 1 1 40rem;
+    border: var(--border);
+    padding: 2rem;
+    text-align: center;
+}
+
+/* ===== FORM ===== */
+.contact form h3 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.contact form .box {
+    width: 100%;
+    margin: 0.7rem 0;
+    padding: 1.2rem;
+    font-size: 1.6rem;
+    border: var(--border);
+}
+
+/* ===== TEXTAREA WRAPPER ===== */
+.textarea-wrapper {
+    position: relative;
+}
+
+.textarea-wrapper textarea {
+    padding-bottom: 38px;
+    resize: none;
+}
+
+/* ===== CHAR COUNTER ===== */
+.char-counter {
+    position: absolute;
+    bottom: 14px;
+    right: 12px;
+    font-size: 12px;
+    color: #777;
+    pointer-events: none;
+}
+
+/* ===== BUTTON ===== */
+.btn {
+    margin-top: 1rem;
+}
+
+/* ===== MODAL OVERLAY ===== */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 40vh;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+/* ===== MODAL BOX ===== */
+.modal-box {
+    background: #2c2c2c;
+    color: #fff;
+    padding: 18px 22px;
+    border-radius: 12px;
+    min-width: 300px;
+    max-width: 90%;
+    text-align: center;
+    white-space: pre-line;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    animation: modalSlide 0.25s ease;
+}
+
+/* ===== SUCCESS ===== */
+.modal.success .modal-box {
+    background: #28a745;
+}
+
+/* ===== MESSAGE (FLEX SYSTEM) ===== */
+.modal-message {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+/* ===== TEXT PART ===== */
+.modal-message span:first-child {
+    flex: 1 1 auto;
+    text-align: left;
+}
+
+/* ===== CLOSE BUTTON ===== */
+.modal-close {
+    font-size: 13px;
+    cursor: pointer;
+    color: #fff;
+    opacity: 0.85;
+    transition: 0.2s ease;
+
+    background: rgba(255,255,255,0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+
+    flex-shrink: 0;
+}
+
+.modal-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+    background: rgba(255,255,255,0.2);
+}
+
+/* ===== WHEN TEXT WRAPS → CENTER BUTTON ===== */
+.modal-message span:first-child:only-child {
+    text-align: center;
+}
+
+.modal-message {
+    text-align: center;
+}
+
+.modal-message .modal-close {
+    margin: 6px auto 0;
+}
+
+/* ===== ANIMATION ===== */
+@keyframes modalSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-25px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 768px) {
+
+    .contact .row {
+        flex-direction: column;
+    }
+
+    .modal {
+        padding-top: 10vh;
+    }
+
+    .modal-box {
+        width: 92%;
+        min-width: unset;
+        font-size: 13px;
+        padding: 16px;
+    }
+
+    .modal-message {
+        font-size: 13px;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .modal-close {
+        margin-top: 6px;
+    }
+
+    .char-counter {
+        bottom: 12px;
+    }
+}

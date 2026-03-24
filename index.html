@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Login - Food Website</title>
+
+   <link rel="shortcut icon" href="images/ngplogo.jpg">
+   <link rel="stylesheet" href="https://unpkg.com/swiper@8/swiper-bundle.min.css"/>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+   <link rel="stylesheet" href="css/style.css">
+   <link rel="stylesheet" href="css/login.css">
+
+</head>
+
+<body>
+   <!-- Clean header without top logo/nav -->
+
+   <!-- Login Container -->
+   <div class="login-container">
+      <div class="login-box" id="formBox">
+         <img src="images/ngplogo.jpg" alt="Logo" class="login-logo">
+         <h2>Welcome Back</h2>
+
+         <p class="login-subtitle">Please login to order your favorite food</p>
+
+         
+         <form id="loginForm">
+            <div class="form-group">
+               <input type="text" id="loginInput" placeholder="Email or ID" required>
+            </div>
+            <div class="form-group">
+               <input type="password" id="password" placeholder="Password" required>
+               <i class="fas fa-eye-slash" id="eyeIcon"></i>
+            </div>
+            <button type="submit" class="btn-login">Login</button>
+         </form>
+
+         <div class="guest-links">
+            <p>No account? <a href="register.html">Register here</a></p>
+         </div>
+      </div>
+   </div>
+
+   <!-- Error Popup -->
+   <div id="errorPopup">
+      <span id="popupMessage"></span>
+      <button id="closeBtn" style="background: none; border: none; float: right; cursor: pointer; font-size: 1.2rem;">&times;</button>
+   </div>
+
+   <!-- Scripts -->
+   <script src="https://unpkg.com/swiper@8/swiper-bundle.min.js"></script>
+   <script src="js/script.js"></script>
+   <script type="module" src="components/JS/login.js"></script>
+</body>
+</html>
+
