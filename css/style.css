@@ -921,51 +921,48 @@ section{
    color:var(--white);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 .footer .grid{
    display: grid;
-   grid-template-columns: repeat(auto-fit, minmax(27rem, 1fr));
+   grid-template-columns: repeat(4, 1fr);
    gap:1.5rem;
-   align-items: flex-start;
+   align-items: stretch;
 }
 
-.footer .grid .box{
-   border:var(--border);
-   padding:2rem;
-   text-align: center;
+.footer .grid .box {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(14px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
 }
 
-.footer .grid .box img{
-   height: 10rem;
-   width: 100%;
-   object-fit: contain;
-   margin-bottom: .5rem;
+.footer .grid .box img {
+  height: 4.5rem;
+  width: 4.5rem;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
-.footer .grid .box h3{
-   margin:1rem 0;
-   font-size: 2rem;
-   color:var(--black);
-   text-transform: capitalize;
+.footer .grid .box h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--black);
+  text-transform: capitalize;
 }
 
 .footer .grid .box p,
-.footer .grid .box a{
-   display: block;
-   font-size: 1.7rem;
-   color:var(--light-color);
-   line-height: 1.8;
+.footer .grid .box a {
+  margin: 0;
+  font-size: 1.4rem;
+  color: var(--light-color);
+  line-height: 1.3;
 }
 
 .footer .grid .box a:hover{
@@ -973,13 +970,13 @@ section{
 }
 
 .credit{
-   padding:3rem 2rem;
+   padding:2rem;
    text-align: center;
-   background-color: var(--black);
+   background: rgba(0,0,0,0.95);
+   backdrop-filter: blur(12px);
    color:var(--white);
-   font-size: 2rem;
+   font-size: 1.8rem;
    text-transform: capitalize;
-   /* padding-bottom: 10rem; */
 }
 
 .credit span{
@@ -1074,6 +1071,16 @@ section{
       flex-flow: column;
       gap:0;
    }   
+
+   .footer .grid {
+      grid-template-columns: 1fr;
+   }
+
+   .footer .grid .box {
+      flex-direction: column;
+      gap: 0.5rem;
+      text-align: center;
+   }
 
 }
 /* Add this CSS to your custom CSS file (css/style.css) */

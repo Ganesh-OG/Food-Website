@@ -1,10 +1,9 @@
 import { supabase } from "./config.js";
-
-// 🔥 IMPORTANT FIX (ensures add_cart.js loads first)
 import "./add_cart.js";
 
+let cartData = {};
 
-// ================= HEADER + FOOTER =================
+// ================= INIT =================
 document.addEventListener("DOMContentLoaded", async () => {
 
     const header = await fetch("user_header.html");
@@ -13,112 +12,229 @@ document.addEventListener("DOMContentLoaded", async () => {
     const footer = await fetch("footer.html");
     document.getElementById("footerContainer").innerHTML = await footer.text();
 
-    await loadMenu();
-
-    subscribeToProductChanges();
+    await loadCartFromDB();
+    await updateHeaderFromDB();
+    loadMenu();
 });
 
+// ================= LOAD CART =================
+async function loadCartFromDB() {
 
-// ================= REALTIME =================
-function subscribeToProductChanges() {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) return;
 
-    supabase
-        .channel("products-changes")
-        .on(
-            "postgres_changes",
-            {
-                event: "*",
-                schema: "public",
-                table: "products"
-            },
-            () => {
-                loadMenu();
-            }
-        )
-        .subscribe();
+    const { data } = await supabase
+        .from("cart")
+        .select("cart_items")
+        .eq("user_email", user.email)
+        .maybeSingle();
+
+    cartData = data?.cart_items || {};
 }
 
+// ================= UPDATE CART =================
+async function updateCartDB() {
+
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    await supabase
+        .from("cart")
+        .update({ cart_items: cartData })
+        .eq("user_email", user.email);
+}
+
+// ================= HEADER UPDATE =================
+async function updateHeaderFromDB() {
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) return;
+
+    const { data } = await supabase
+        .from("cart")
+        .select("cart_items")
+        .eq("user_email", user.email)
+        .maybeSingle();
+
+    const cart = data?.cart_items || {};
+
+    let total = 0;
+    Object.values(cart).forEach(q => total += q);
+
+    const el = document.getElementById("cartCount");
+    if (el) el.textContent = total > 0 ? `(${total})` : "";
+}
+
+// ================= CART BAR =================
+function showCartBar() {
+
+    const bar = document.getElementById("cartBar");
+    if (!bar) return;
+
+    bar.classList.add("show");
+
+    let total = 0;
+    Object.values(cartData).forEach(q => total += q);
+
+    document.getElementById("cartText").textContent =
+        `${total} item${total > 1 ? "s" : ""} added`;
+}
+
+// ================= TOAST =================
+function showToast(message) {
+
+    let toast = document.getElementById("toast");
+
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast";
+        toast.className = "toast";
+        document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2000);
+}
 
 // ================= LOAD MENU =================
 async function loadMenu() {
 
     const container = document.getElementById("menuContainer");
-    if (!container) return;
-
     container.innerHTML = "";
 
     const { data: products } = await supabase
         .from("products")
         .select("*");
 
-    if (!products || products.length === 0) {
-        container.innerHTML = `<p class="empty">No products found!</p>`;
-        return;
-    }
+    if (!products) return;
 
-    // 🔥 FILTER ENABLED ONLY
-    const visibleProducts = products.filter(
-        p => p.Status?.toLowerCase().trim() !== "disabled"
-    );
+    // ================= GROUP BY CATEGORY =================
+    const grouped = {};
 
-    // 🔥 ALL DISABLED
-    if (visibleProducts.length === 0) {
-        container.innerHTML = `
-            <p class="empty">
-                Menu is currently unavailable.<br>
-                Please check back later.
-            </p>
-        `;
-        return;
-    }
+    products.forEach(p => {
+        const cat = (p.category || "Others").toLowerCase();
 
-    visibleProducts.forEach(product => {
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(p);
+    });
 
-        const isOut = product.stock <= 0;
+    // ================= RENDER =================
+    Object.keys(grouped).forEach(category => {
 
-        const imageUrl = supabase.storage
-            .from("Food-Website-Storage")
-            .getPublicUrl(`Products/${product.image}`).data.publicUrl;
+        // 🔥 CATEGORY HEADER (ONLY MOBILE VIA CSS)
+        const header = document.createElement("div");
+        header.className = "category-header";
+        header.textContent = category.toUpperCase();
+        container.appendChild(header);
 
-        const form = document.createElement("form");
-        form.className = "box";
+        grouped[category].forEach(product => {
 
-        form.innerHTML = `
-            ${!isOut ? `<button class="fas fa-shopping-cart"></button>` : ""}
+            const isOut = product.stock <= 0;
+            const qty = cartData[product.id] || 0;
 
-            <img src="${imageUrl}" 
-                style="${isOut ? 'filter: grayscale(100%); opacity:0.5;' : ''}">
+            const img = supabase.storage
+                .from("Food-Website-Storage")
+                .getPublicUrl(`Products/${product.image}`).data.publicUrl;
 
-            <div class="cat">${product.category || "Food"}</div>
-            <div class="name">${product.name}</div>
+            const card = document.createElement("div");
+            card.className = "box";
 
-            <div class="flex">
-                <div class="price"><span>₹</span>${product.price}</div>
+            card.innerHTML = `
+                <div class="img-wrapper">
+                    <img src="${img}">
+                </div>
 
-                ${
-                    isOut
-                        ? `<div style="color:red;"><strong>Out of Stock</strong></div>`
-                        : `
-                        <div class="quantity">Quantity left: ${product.stock}</div>
-                        <input type="number" class="qty"
-                            min="1" max="${product.stock}" value="1">
-                        `
-                }
-            </div>
-        `;
+                <div style="flex:1">
+                    <div class="name">${product.name}</div>
 
-        // ================= ADD TO CART =================
-        if (!isOut) {
-            form.addEventListener("submit", (e) => {
-                e.preventDefault();
+                    <div class="flex">
+                        <div class="price">₹${product.price}</div>
 
-                const qty = Number(form.querySelector(".qty").value);
+                        ${
+                            isOut
+                                ? `<div class="out-of-stock">Out</div>`
+                                : `
+                                <div class="cart-action">
+                                    ${
+                                        qty > 0
+                                            ? getStepper(qty)
+                                            : `<button class="add-cart">ADD</button>`
+                                    }
+                                </div>
+                                `
+                        }
+                    </div>
+                </div>
+            `;
 
-                // 🔥 NOW SAFE (add_cart loaded via import)
-                window.addToCart(product, qty);
-            });
+            attachCartLogic(card, product);
+            container.appendChild(card);
+        });
+    });
+}
+
+// ================= CART EVENTS =================
+function attachCartLogic(card, product) {
+
+    const actionBox = card.querySelector(".cart-action");
+    if (!actionBox) return;
+
+    actionBox.addEventListener("click", async (e) => {
+        e.preventDefault();
+
+        let currentQty = cartData[product.id] || 0;
+        let actionType = "";
+
+        if (e.target.classList.contains("add-cart")) {
+            currentQty = 1;
+            actionType = "add";
         }
 
-        container.appendChild(form);
+        if (e.target.dataset.type === "inc") {
+            currentQty++;
+            actionType = "inc";
+        }
+
+        if (e.target.dataset.type === "dec") {
+            currentQty--;
+            actionType = "dec";
+        }
+
+        if (currentQty <= 0) {
+            delete cartData[product.id];
+            actionBox.innerHTML = `<button class="add-cart">ADD</button>`;
+        } else {
+            cartData[product.id] = currentQty;
+            actionBox.innerHTML = getStepper(currentQty);
+        }
+
+        await updateCartDB();
+        await updateHeaderFromDB();
+        showCartBar();
+
+        // TOAST
+        if (actionType === "add" || actionType === "inc") {
+            showToast(`${product.name} added`);
+        }
+        else if (actionType === "dec" && currentQty > 0) {
+            showToast(`${product.name} updated`);
+        }
+        else if (currentQty <= 0) {
+            showToast(`${product.name} removed`);
+        }
     });
+}
+
+// ================= STEPPER =================
+function getStepper(qty) {
+    return `
+        <div class="qty-box">
+            <button class="qty-btn" data-type="dec">-</button>
+            <span class="qty-value">${qty}</span>
+            <button class="qty-btn" data-type="inc">+</button>
+        </div>
+    `;
 }
