@@ -64,8 +64,12 @@ img {
   transition: 0.3s;
 }
 
-.products .box:hover {
+.products .box:hover:not(.out-stock) {
   transform: translateY(-5px);
+}
+
+.products .box.out-stock img {
+  filter: grayscale(100%) opacity(0.6);
 }
 
 /* IMAGE */
@@ -117,6 +121,12 @@ img {
   font-size: 1.2rem;
 }
 
+.stock {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 2px;
+}
+
 /* ADD BUTTON */
 .add-cart {
   border: 1px solid #ddd;
@@ -154,6 +164,11 @@ img {
 
 .qty-value {
   font-weight: bold;
+}
+
+.out-of-stock {
+  color: #ef4444;
+  font-weight: 600;
 }
 
 /* CART BAR */
@@ -244,6 +259,10 @@ img {
 
   .products {
     padding: 1rem;
+  }
+
+  .products .box.out-stock img {
+    filter: grayscale(100%) opacity(0.6);
   }
 
   .box-container {
