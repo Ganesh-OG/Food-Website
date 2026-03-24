@@ -221,6 +221,24 @@ img {
   display: none;
 }
 
+/* ================= MENU-SPECIFIC PROFILE DROPDOWN SPACING ================= */
+.header .profile {
+  width: 35rem; /* Increased from 30rem for more space */
+}
+
+.header .profile .flex {
+  gap: 1.5rem;
+  justify-content: space-between;
+}
+
+.header .profile .btn,
+.header .profile .delete-btn {
+  flex: 1;
+  text-align: center;
+  margin-top: 0;
+  padding: 1rem 2rem;
+}
+
 /* ================= MOBILE ================= */
 @media (max-width: 768px) {
 
@@ -303,11 +321,5 @@ img {
   .qty-value {
     font-size: 14px;
   }
-
-  .category-header {
-    display: block;
-    font-weight: 700;
-    font-size: 14px;
-    margin: 10px 5px;
-  }
 }
+
