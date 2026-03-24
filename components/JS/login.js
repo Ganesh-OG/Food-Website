@@ -17,12 +17,19 @@ document.addEventListener("DOMContentLoaded", () => {
     function showPopup(message, type = "error") {
         popup.classList.remove("popup-error", "popup-success");
 
-        popup.classList.add(type === "success" ? "popup-success" : "popup-error");
+        if (type === "success") {
+            popup.classList.add("popup-success");
+        } else {
+            popup.classList.add("popup-error");
+        }
 
         popupMsg.textContent = message;
         popup.style.display = "flex";
 
-        setTimeout(() => {
+        // prevent overlap issues
+        clearTimeout(popup.hideTimer);
+
+        popup.hideTimer = setTimeout(() => {
             popup.style.display = "none";
         }, 2000);
     }
@@ -52,7 +59,6 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             let user = null;
 
-            // 🔹 EMAIL
             let { data, error } = await supabase
                 .from("users")
                 .select("*")
@@ -63,7 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (error) throw error;
             user = data;
 
-            // 🔹 ID
             if (!user) {
                 const res = await supabase
                     .from("users")
@@ -76,17 +81,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 user = res.data;
             }
 
-            // ❌ INVALID
             if (!user) {
                 showPopup("Invalid Username or Password");
 
                 formBox.classList.add("shake");
                 setTimeout(() => formBox.classList.remove("shake"), 300);
-
                 return;
             }
 
-            // ✅ SUCCESS
             localStorage.setItem("user", JSON.stringify(user));
 
             showPopup("Login Successful", "success");
