@@ -1,0 +1,667 @@
+{
+  "Orders": {
+    "02-03-2023": {
+      "Order-ID-1": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Cancelled"
+      },
+      "Order-ID-2": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Complete"
+      },
+      "Order-ID-3": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Cancelled"
+      },
+      "Order-ID-4": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Complete"
+      }
+    },
+    "03-03-2023": {
+      "Order-ID-1": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Cancelled"
+      },
+      "Order-ID-2": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Canceled"
+      },
+      "Order-ID-3": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Complete"
+      }
+    },
+    "05-03-2023": {
+      "Order-ID-1": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Order Pending"
+      },
+      "Order-ID-2": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Order Pending"
+      },
+      "Order-ID-3": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Order Pending"
+      },
+      "Order-ID-4": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Order Pending"
+      },
+      "Order-ID-5": {
+        "email": "211CA110@drngpasc.ac.in",
+        "overall_total": 125,
+        "products": {
+          "p1": {
+            "name": "choco Lava ",
+            "price": "50",
+            "quantity": 2,
+            "total_cost": 100
+          },
+          "p3": {
+            "name": "Brown cake   ",
+            "price": "25",
+            "quantity": "1",
+            "total_cost": 25
+          }
+        },
+        "status": "Order Pending"
+      }
+    }
+  },
+  "cart": {
+    "211CA144@drngpascacin": {
+      "p6": "2"
+    },
+    "null": ""
+  },
+  "categories": {
+    "p1": {
+      "filename": "choco-lava.jpg",
+      "itemPrice": "50",
+      "itemType": "desserts",
+      "product_name": "choco Lava ",
+      "quantity": 84
+    },
+    "p2": {
+      "filename": "kurkure.jpg",
+      "itemPrice": "20",
+      "itemType": "fast food",
+      "product_name": "Kurkure ",
+      "quantity": 94
+    },
+    "p3": {
+      "filename": "browncake.jpeg",
+      "itemPrice": "25",
+      "itemType": "dessert",
+      "product_name": "Brown cake   ",
+      "quantity": 44
+    },
+    "p4": {
+      "filename": "cutlet.jpg",
+      "itemPrice": "20",
+      "itemType": "fast food",
+      "product_name": "cutlet ",
+      "quantity": 99
+    },
+    "p5": {
+      "filename": "brownie.jpg",
+      "itemPrice": "25",
+      "itemType": "main dish",
+      "product_name": "Brownie ",
+      "quantity": 99
+    },
+    "p6": {
+      "filename": "chickenroll.jpg",
+      "itemPrice": "30",
+      "itemType": "fast food",
+      "product_name": "Chicken Roll",
+      "quantity": 49
+    }
+  },
+  "contact": {
+    "-NqymrOxiXx0aaDFoDLG": {
+      "email": "211CA110@drngpasc.ac.in",
+      "message": "nil",
+      "name": "ganesh",
+      "number": "9791705293"
+    }
+  },
+  "detials": {
+    "Management": {
+      "Admin": {
+        "Email": "Canteen@gmail.com",
+        "Name": "Ganesh",
+        "Password": "canteen@19.02"
+      },
+      "Admin1": {
+        "Email": "Canteen1@gmail.com",
+        "Name": "Mithun",
+        "Password": "Canteen@123"
+      },
+      "staffs": {
+        "Email": "Staff1@gmail.com",
+        "Name": "staff1",
+        "Password": "Staff@123"
+      }
+    },
+    "users": {
+      "BCA": {
+        "211CA102": {
+          "Amount": 100,
+          "DOB": "5/19/2004",
+          "Email": "211CA102@drngpasc.ac.in",
+          "Name": "ADARSH S",
+          "Password": "5/19/2004"
+        },
+        "211CA103": {
+          "DOB": "6/26/2004",
+          "Email": "211CA103@drngpasc.ac.in",
+          "Name": "ANDREW PATRICK L",
+          "Password": "6/26/2004"
+        },
+        "211CA104": {
+          "DOB": "1/24/2004",
+          "Email": "211CA104@drngpasc.ac.in",
+          "Name": "ANISH. M",
+          "Password": "1/24/2004"
+        },
+        "211CA105": {
+          "DOB": "11/2/2004",
+          "Email": "211CA105@drngpasc.ac.in",
+          "Name": "ANISHA P",
+          "Password": "11/2/2004"
+        },
+        "211CA106": {
+          "Amount": 100,
+          "DOB": "7/1/2004",
+          "Email": "211CA106@drngpasc.ac.in",
+          "Name": "ANUVARSHINI S K",
+          "Password": "7/1/2004"
+        },
+        "211CA107": {
+          "DOB": "3/22/2004",
+          "Email": "211CA107@drngpasc.ac.in",
+          "Name": "ASWIN.S",
+          "Password": "3/22/2004"
+        },
+        "211CA108": {
+          "DOB": "7/30/2003",
+          "Email": "211CA108@drngpasc.ac.in",
+          "Name": "DEVI PRABHA.K",
+          "Password": "7/30/2003"
+        },
+        "211CA109": {
+          "DOB": "6/23/2004",
+          "Email": "211CA109@drngpasc.ac.in",
+          "Name": "DHANUSHA R",
+          "Password": "6/23/2004"
+        },
+        "211CA110": {
+          "Amount": 375,
+          "DOB": "2/19/2004",
+          "Email": "211CA110@drngpasc.ac.in",
+          "Name": "GANESH S",
+          "Password": "2/19/2004"
+        },
+        "211CA111": {
+          "DOB": "2/19/2004",
+          "Email": "211CA111@drngpasc.ac.in",
+          "Name": "JAGAN.R",
+          "Password": "2/19/2004"
+        },
+        "211CA112": {
+          "DOB": "7/26/2003",
+          "Email": "211CA112@drngpasc.ac.in",
+          "Name": "KAMESH.M",
+          "Password": "7/26/2003"
+        },
+        "211CA113": {
+          "DOB": "7/7/2004",
+          "Email": "211CA113@drngpasc.ac.in",
+          "Name": "KARTHIK.R",
+          "Password": "7/7/2004"
+        },
+        "211CA114": {
+          "DOB": "1/5/2004",
+          "Email": "211CA114@drngpasc.ac.in",
+          "Name": "KAVINKUMAR B",
+          "Password": "1/5/2004"
+        },
+        "211CA115": {
+          "DOB": "6/8/2004",
+          "Email": "211CA115@drngpasc.ac.in",
+          "Name": "KEERTHANA.B",
+          "Password": "6/8/2004"
+        },
+        "211CA116": {
+          "DOB": "8/24/2003",
+          "Email": "211CA116@drngpasc.ac.in",
+          "Name": "KESIKA T",
+          "Password": "8/24/2003"
+        },
+        "211CA117": {
+          "DOB": "7/5/2004",
+          "Email": "211CA117@drngpasc.ac.in",
+          "Name": "KISANTH.V",
+          "Password": "7/5/2004"
+        },
+        "211CA118": {
+          "DOB": "2/1/2003",
+          "Email": "211CA118@drngpasc.ac.in",
+          "Name": "KISHORE V",
+          "Password": "2/1/2003"
+        },
+        "211CA119": {
+          "DOB": "5/16/2003",
+          "Email": "211CA119@drngpasc.ac.in",
+          "Name": "LAUCKY NAVEEN V",
+          "Password": "5/16/2003"
+        },
+        "211CA121": {
+          "DOB": "9/24/2003",
+          "Email": "211CA121@drngpasc.ac.in",
+          "Name": "MANOJ.V",
+          "Password": "9/24/2003"
+        },
+        "211CA122": {
+          "DOB": "8/27/2003",
+          "Email": "211CA122@drngpasc.ac.in",
+          "Name": "MATHUMITHA.S",
+          "Password": "8/27/2003"
+        },
+        "211CA123": {
+          "Amount": 100,
+          "DOB": "6/22/2004",
+          "Email": "211CA123@drngpasc.ac.in",
+          "Name": "MITHUN KUMAR V",
+          "Password": "6/22/2004"
+        },
+        "211CA124": {
+          "DOB": "3/6/2004",
+          "Email": "211CA124@drngpasc.ac.in",
+          "Name": "MONIKA S",
+          "Password": "3/6/2004"
+        },
+        "211CA125": {
+          "DOB": "10/22/2003",
+          "Email": "211CA125@drngpasc.ac.in",
+          "Name": "MOUNESH.V",
+          "Password": "10/22/2003"
+        },
+        "211CA126": {
+          "DOB": "4/6/2004",
+          "Email": "211CA126@drngpasc.ac.in",
+          "Name": "NIKKESH.V.M",
+          "Password": "4/6/2004"
+        },
+        "211CA127": {
+          "DOB": "8/7/2003",
+          "Email": "211CA127@drngpasc.ac.in",
+          "Name": "POORVA SANDHYA.T",
+          "Password": "8/7/2003"
+        },
+        "211CA128": {
+          "DOB": "8/1/2003",
+          "Email": "211CA128@drngpasc.ac.in",
+          "Name": "PRADEEPA K",
+          "Password": "8/1/2003"
+        },
+        "211CA129": {
+          "DOB": "4/23/2003",
+          "Email": "211CA129@drngpasc.ac.in",
+          "Name": "RAM PRAKASH S",
+          "Password": "4/23/2003"
+        },
+        "211CA130": {
+          "DOB": "3/28/2003",
+          "Email": "211CA130@drngpasc.ac.in",
+          "Name": "REETHIK.R",
+          "Password": "3/28/2003"
+        },
+        "211CA131": {
+          "DOB": "6/11/2003",
+          "Email": "211CA131@drngpasc.ac.in",
+          "Name": "RESHMA T R",
+          "Password": "6/11/2003"
+        },
+        "211CA132": {
+          "DOB": "7/4/2004",
+          "Email": "211CA132@drngpasc.ac.in",
+          "Name": "ROSHAN.A",
+          "Password": "7/4/2004"
+        },
+        "211CA133": {
+          "DOB": "1/9/2003",
+          "Email": "211CA133@drngpasc.ac.in",
+          "Name": "RUBASRI. S",
+          "Password": "1/9/2003"
+        },
+        "211CA134": {
+          "DOB": "10/17/2003",
+          "Email": "211CA134@drngpasc.ac.in",
+          "Name": "SAKTHIVEL B",
+          "Password": "10/17/2003"
+        },
+        "211CA135": {
+          "DOB": "3/23/2004",
+          "Email": "211CA135@drngpasc.ac.in",
+          "Name": "SAKTHIVEL S",
+          "Password": "3/23/2004"
+        },
+        "211CA136": {
+          "DOB": "4/7/2003",
+          "Email": "211CA136@drngpasc.ac.in",
+          "Name": "SANDHYA DAS.A",
+          "Password": "4/7/2003"
+        },
+        "211CA137": {
+          "DOB": "3/21/2004",
+          "Email": "211CA137@drngpasc.ac.in",
+          "Name": "SANGEERTHAN.J",
+          "Password": "3/21/2004"
+        },
+        "211CA138": {
+          "DOB": "11/6/2004",
+          "Email": "211CA138@drngpasc.ac.in",
+          "Name": "SANJEEVI.N",
+          "Password": "11/6/2004"
+        },
+        "211CA139": {
+          "DOB": "8/18/2003",
+          "Email": "211CA139@drngpasc.ac.in",
+          "Name": "SAVIN K",
+          "Password": "8/18/2003"
+        },
+        "211CA140": {
+          "DOB": "3/21/2003",
+          "Email": "211CA140@drngpasc.ac.in",
+          "Name": "SHANMUGASUNDARAM J",
+          "Password": "3/21/2003"
+        },
+        "211CA141": {
+          "DOB": "10/20/2003",
+          "Email": "211CA141@drngpasc.ac.in",
+          "Name": "SHYAM HARI B",
+          "Password": "10/20/2003"
+        },
+        "211CA142": {
+          "DOB": "6/14/2004",
+          "Email": "211CA142@drngpasc.ac.in",
+          "Name": "SOWMIYA S",
+          "Password": "6/14/2004"
+        },
+        "211CA143": {
+          "DOB": "4/19/2004",
+          "Email": "211CA143@drngpasc.ac.in",
+          "Name": "SRIKARTHI.RB",
+          "Password": "4/19/2004"
+        },
+        "211CA144": {
+          "DOB": "11/5/2003",
+          "Email": "211CA144@drngpasc.ac.in",
+          "Name": "SRIDHAR.N",
+          "Password": "11/5/2003"
+        },
+        "211CA145": {
+          "DOB": "1/28/2004",
+          "Email": "211CA145@drngpasc.ac.in",
+          "Name": "SUBASH S",
+          "Password": "1/28/2004"
+        },
+        "211CA146": {
+          "DOB": "11/4/2004",
+          "Email": "211CA146@drngpasc.ac.in",
+          "Name": "SUBRAMANIAN M",
+          "Password": "11/4/2004"
+        },
+        "211CA147": {
+          "DOB": "12/4/2003",
+          "Email": "211CA147@drngpasc.ac.in",
+          "Name": "SUDHEKSHA.S",
+          "Password": "12/4/2003"
+        },
+        "211CA148": {
+          "DOB": "5/22/2003",
+          "Email": "211CA148@drngpasc.ac.in",
+          "Name": "SUKANKUMAR V",
+          "Password": "5/22/2003"
+        },
+        "211CA149": {
+          "DOB": "8/20/2003",
+          "Email": "211CA149@drngpasc.ac.in",
+          "Name": "THERADI MUTHU R",
+          "Password": "8/20/2003"
+        },
+        "211CA150": {
+          "DOB": "2/28/2004",
+          "Email": "211CA150@drngpasc.ac.in",
+          "Name": "VIJAYAKUMAR. G",
+          "Password": "2/28/2004"
+        },
+        "211CA151": {
+          "DOB": "2/1/2004",
+          "Email": "211CA151@drngpasc.ac.in",
+          "Name": "VIKAS B",
+          "Password": "2/1/2004"
+        },
+        "211CA152": {
+          "DOB": "6/16/2004",
+          "Email": "211CA152@drngpasc.ac.in",
+          "Name": "VIMAL. P",
+          "Password": "6/16/2004"
+        },
+        "211CA153": {
+          "DOB": "9/12/2003",
+          "Email": "211CA153@drngpasc.ac.in",
+          "Name": "VINODHINI V",
+          "Password": "9/12/2003"
+        },
+        "211CA154": {
+          "DOB": "10/13/2003",
+          "Email": "211CA154@drngpasc.ac.in",
+          "Name": "VISHNU HARSHA S",
+          "Password": "10/13/2003"
+        },
+        "211CA155": {
+          "DOB": "8/16/2003",
+          "Email": "211CA155@drngpasc.ac.in",
+          "Name": "YAMINI.R",
+          "Password": "8/16/2003"
+        },
+        "211CA156": {
+          "DOB": "8/16/2003",
+          "Email": "211CA156@drngpasc.ac.in",
+          "Name": "YASHINE.R",
+          "Password": "8/16/2003"
+        }
+      },
+      "external_users": {
+        "u1": {
+          "DOB": "19/02/2004",
+          "Email": "ganesh@gmail.com",
+          "Name": "Ganesh s",
+          "Password": 1234
+        }
+      }
+    }
+  },
+  "messages": {
+    "Adress": "Kalapatti Main Rd, Sharp Nagar, Nehru Nagar West, Coimbatore, Tamil Nadu 641035 ",
+    "Opening Hours": "08:00 am-04:00 pm",
+    "Our Email": {
+      "Email1": "canteen@gmail.com",
+      "Email2": "canteen2@gmail.com"
+    },
+    "Phone No": {
+      "Number-1": 9791705293,
+      "Number-2": 9944632903
+    }
+  }
+}

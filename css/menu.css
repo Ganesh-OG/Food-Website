@@ -42,6 +42,32 @@ img {
   border-color: var(--green);
 }
 
+/* CATEGORY TABS */
+.category-tabs {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.category-tabs .tab {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.category-tabs .tab.active {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+
 /* GRID */
 .box-container {
   display: grid;
@@ -69,7 +95,7 @@ img {
 }
 
 .products .box.out-stock img {
-  filter: grayscale(100%) opacity(0.6);
+  filter: grayscale(100%) opacity(10);
 }
 
 /* IMAGE */
@@ -233,7 +259,19 @@ img {
   transform: translate(-50%, -40%);
 }
 .category-header {
-  display: none;
+  grid-column: 1 / -1;
+  font-size: 1.3rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 2rem 0 1rem;
+  margin: 1rem 0 0;
+  color: var(--text);
+  border-bottom: 2px solid #eee;
+}
+
+.category-header.out-of-stock-header {
+  color: #ef4444;
+  background: rgba(239,68,68,0.1);
 }
 
 /* ================= MENU-SPECIFIC PROFILE DROPDOWN SPACING ================= */

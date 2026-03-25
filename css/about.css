@@ -1,59 +1,6 @@
-/* about.html specific styles */
-.about {
-  padding: 4rem 2rem;
-  background: #f9f9f9;
-}
+/* about.html specific styles - Steps match footer glassmorphism */
 
-.about .row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4rem;
-  align-items: center;
-}
-
-.about .image img {
-  width: 100%;
-  height: 400px;
-  object-fit: cover;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
-
-.about .content h3 {
-  font-size: 2.5rem;
-  color: var(--green);
-  margin-bottom: 1rem;
-}
-
-.about .content p {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: #666;
-  margin-bottom: 2rem;
-}
-
-.heading {
-  padding: 2rem;
-  text-align: center;
-  background: var(--green);
-  color: white;
-}
-
-.heading h3 {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
-}
-
-.heading p a {
-  color: white;
-  text-decoration: none;
-}
-
-.heading p a:hover {
-  text-decoration: underline;
-}
-
-/* Steps Section */
+/* Steps Section - Exact footer match */
 .steps {
   padding: 4rem 2rem;
 }
@@ -61,54 +8,67 @@
 .steps .title {
   text-align: center;
   font-size: 3rem;
-  color: var(--green);
+  color: var(--black);
   margin-bottom: 3rem;
 }
 
 .steps .box-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(25rem, 1fr));
   gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  align-items: stretch;
 }
 
-.steps .box {
+.steps .box-container .box {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(14px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 1.5rem;
   text-align: center;
-  padding: 2rem;
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-  transition: transform 0.3s;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
 }
 
-.steps .box:hover {
-  transform: translateY(-10px);
-}
-
-.steps .box img {
-  width: 100px;
-  height: 100px;
+.steps .box-container .box img {
+  width: 7rem;
+  height: auto;
+  max-height: 7rem;
   object-fit: contain;
-  margin-bottom: 1rem;
+  background: transparent;
+  flex-shrink: 0;
 }
 
-.steps .box h3 {
+.steps .box-container .box h3 {
+  margin: 0;
   font-size: 1.5rem;
-  color: var(--green);
-  margin-bottom: 1rem;
+  color: var(--black);
+  text-transform: capitalize;
+}
+
+.steps .box-container .box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .about .row {
+  .steps .box-container {
     grid-template-columns: 1fr;
-    gap: 2rem;
-    text-align: center;
   }
   
-  .heading h3, .steps .title {
-    font-size: 2rem;
+  .steps .title {
+    font-size: 2.5rem;
+  }
+  
+  .steps .box-container .box {
+    max-width: none;
   }
 }
 

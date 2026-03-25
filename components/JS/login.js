@@ -3,7 +3,6 @@
 import { supabase } from "./config.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-
     const form = document.getElementById("loginForm");
     const passwordField = document.getElementById("password");
     const eyeIcon = document.getElementById("eyeIcon");

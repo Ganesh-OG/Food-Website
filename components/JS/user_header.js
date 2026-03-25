@@ -111,3 +111,4 @@ async function initializeUserInfo() {
     console.error("❌ Initialization error:", err);
   }
 }
+

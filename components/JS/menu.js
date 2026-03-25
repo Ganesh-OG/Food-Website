@@ -1,6 +1,7 @@
 import { supabase } from "./config.js";
 import "./add_cart.js";
 
+let currentFilter = null;
 let cartData = {};
 
 // ================= INIT =================
@@ -14,14 +15,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await loadCartFromDB();
     await updateHeaderFromDB();
-    loadMenu();
+
+    // Parse URL param
+    const urlParams = new URLSearchParams(window.location.search);
+    currentFilter = urlParams.get('category') || null;
+
+    await loadCategories();
+    await loadMenu(currentFilter);
     
     // Realtime updates for products - TARGETED UPDATES ONLY
     supabase
       .channel('menu-products')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async (payload) => {
         console.log('Product change:', payload);
-        updateStockDisplay(payload);
+        const container = document.getElementById('menuContainer');
+        if (container) {
+          container.innerHTML = '';
+          await loadMenu(currentFilter);
+        }
       })
       .subscribe();
 });
@@ -260,68 +271,162 @@ function updateCardStock(card, product) {
     }
 }
 
-    // ================= LOAD MENU (INITIAL FULL LOAD + REORDER) =================
-    async function loadMenu() {
+// ================= LOAD CATEGORIES =================
+async function loadCategories() {
+  const tabsContainer = document.getElementById('categoryTabs');
+  if (!tabsContainer) return;
 
-        const container = document.getElementById("menuContainer");
-        container.innerHTML = "";
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('category')
+    .neq('Status', 'disabled')
+    .order('category');
 
-        const { data: products } = await supabase
-            .from("products")
-            .select("*")
-            .neq("Status", "disabled")
-            .order('category');
+  if (error) {
+    console.error('Categories load error:', error);
+    return;
+  }
 
-        if (!products) return;
+  // Client-side unique categories (trimmed)
+  const categories = [...new Set(products.map(p => p.category ? p.category.trim() : null).filter(Boolean))].sort();
 
-        // Separate in-stock vs out-of-stock
-        const inStock = [];
-        const outStock = [];
+  tabsContainer.innerHTML = '';
 
-        products.forEach(p => {
-            if (p.stock > 0) {
-                inStock.push(p);
-            } else {
-                outStock.push(p);
-            }
-        });
+  // All tab
+  const allTab = document.createElement('span');
+  allTab.className = 'tab';
+  allTab.textContent = 'ALL';
+  allTab.dataset.cat = '';
+  allTab.addEventListener('click', () => setFilter(''));
+  tabsContainer.appendChild(allTab);
 
-        // ================= GROUP IN-STOCK BY CATEGORY =================
-        const groupedInStock = {};
+  // Category tabs
+  categories.forEach(cat => {
+    const tab = document.createElement('span');
+    tab.className = 'tab';
+    tab.textContent = cat.toUpperCase();
+    tab.dataset.cat = cat;
+    tab.addEventListener('click', () => setFilter(cat));
+    tabsContainer.appendChild(tab);
+  });
 
-        inStock.forEach(p => {
-            const cat = (p.category || "Others").toLowerCase();
-            if (!groupedInStock[cat]) groupedInStock[cat] = [];
-            groupedInStock[cat].push(p);
-        });
+  // Set initial active
+  setActiveTab(currentFilter || '');
+}
 
-        // ================= RENDER IN-STOCK =================
-        Object.keys(groupedInStock).forEach(category => {
-            const header = document.createElement("div");
-            header.className = "category-header";
-            header.title = category.toUpperCase();
-            header.textContent = category.toUpperCase();
-            container.appendChild(header);
+function setFilter(cat) {
+  currentFilter = cat;
+  loadMenu(currentFilter);
+  history.pushState({}, '', cat ? `?category=${encodeURIComponent(cat)}` : window.location.pathname);
+  setActiveTab(cat);
+}
 
-            groupedInStock[category].forEach(product => {
-                const card = createProductCard(product);
-                header.parentNode.insertBefore(card, header.nextSibling);
-            });
-        });
+function setActiveTab(cat) {
+  document.querySelectorAll('.category-tabs .tab').forEach(tab => tab.classList.remove('active'));
+  const activeTab = document.querySelector(`.category-tabs .tab[data-cat="${cat}"]`) || document.querySelector('.category-tabs .tab[data-cat=""]');
+  if (activeTab) activeTab.classList.add('active');
+}
 
-        // ================= OUT OF STOCK SECTION =================
-        if (outStock.length > 0) {
-            const outHeader = document.createElement("div");
-            outHeader.className = "category-header out-of-stock-header";
-            outHeader.textContent = "OUT OF STOCK";
-            container.appendChild(outHeader);
+// ================= LOAD MENU (INITIAL FULL LOAD + REORDER) =================
+async function loadMenu(filter = null) {
+  const container = document.getElementById("menuContainer");
+  container.innerHTML = "";
 
-            outStock.forEach(product => {
-                const card = createProductCard(product);
-                outHeader.parentNode.insertBefore(card, outHeader.nextSibling);
-            });
-        }
+  let query = supabase
+    .from("products")
+    .select("*")
+    .neq("Status", "disabled")
+    .order('name');
+
+  if (filter) {
+    query = query.eq("category", filter);
+  }
+
+  const { data: products, error } = await query;
+  if (error) {
+    console.error('Menu load error:', error);
+    return;
+  }
+
+  if (!products || products.length === 0) {
+    const noItems = document.createElement("div");
+    noItems.style.textAlign = "center";
+    noItems.style.padding = "2rem";
+    noItems.style.fontSize = "1.2rem";
+    noItems.textContent = filter ? `No items in "${filter.toUpperCase()}" category.` : 'No products available.';
+    container.appendChild(noItems);
+    return;
+  }
+
+  // Separate in-stock vs out-of-stock
+  const inStock = products.filter(p => p.stock > 0);
+  const outStock = products.filter(p => p.stock <= 0);
+
+  if (filter) {
+    // Single category view
+    const header = document.createElement("div");
+    header.className = "category-header";
+    header.textContent = filter.toUpperCase();
+    container.appendChild(header);
+
+    inStock.forEach(product => {
+      container.appendChild(createProductCard(product));
+    });
+
+    if (outStock.length > 0) {
+      const outHeader = document.createElement("div");
+      outHeader.className = "category-header out-of-stock-header";
+      outHeader.textContent = "OUT OF STOCK";
+      container.appendChild(outHeader);
+
+      outStock.forEach(product => {
+        container.appendChild(createProductCard(product));
+      });
     }
+  } else {
+    // All categories grouped - unique headers
+    const categorySet = new Set();
+    inStock.forEach(p => {
+      if (p.category) categorySet.add(p.category.trim());
+    });
+    const uniqueCategories = Array.from(categorySet).sort();
+
+    const groupedInStock = {};
+    inStock.forEach(p => {
+      if (p.category) {
+        const catKey = p.category.trim();
+        if (!groupedInStock[catKey]) groupedInStock[catKey] = [];
+        groupedInStock[catKey].push(p);
+      }
+    });
+
+    // Render unique category groups
+    uniqueCategories.forEach(category => {
+      const header = document.createElement("div");
+      header.className = "category-header";
+      header.textContent = category.toUpperCase();
+      container.appendChild(header);
+
+      groupedInStock[category].forEach(product => {
+        const card = createProductCard(product);
+        header.parentNode.insertBefore(card, header.nextSibling);
+      });
+    });
+
+    // Out of stock section
+    if (outStock.length > 0) {
+      const outHeader = document.createElement("div");
+      outHeader.className = "category-header out-of-stock-header";
+      outHeader.textContent = "OUT OF STOCK";
+      container.appendChild(outHeader);
+
+      outStock.forEach(product => {
+        const card = createProductCard(product);
+        outHeader.parentNode.insertBefore(card, outHeader.nextSibling);
+      });
+    }
+  }
+}
 
 // ================= CART EVENTS =================
 function attachCartLogic(card, product) {

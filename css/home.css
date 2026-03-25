@@ -1,0 +1,121 @@
+/* ================= GLOBAL ================= */
+.category,
+.hero {
+    padding: 2rem 5%;
+}
+
+/* ================= HERO ================= */
+.hero .slide {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.hero .slide .image img {
+    width: 100%;
+    max-width: 420px;
+    object-fit: contain;
+}
+
+/* ================= CATEGORY SECTION ================= */
+.category .swiper {
+    padding: 1rem 0;
+}
+
+/* ================= SLIDE FIX ================= */
+.category .swiper-slide {
+    display: flex;
+    justify-content: center;
+}
+
+/* ================= CATEGORY CARD ================= */
+.category .box {
+    width: 100%;
+    max-width: 200px;
+
+    aspect-ratio: 1 / 1; /* 🔥 PERFECT SQUARE */
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    text-align: center;
+    background: #fff;
+    border-radius: 20px;
+    padding: 1rem;
+
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border: 1px solid #eee;
+}
+
+/* ================= HOVER ================= */
+.category .box:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.15);
+}
+
+/* ================= IMAGE ================= */
+.category .box img {
+    width: 80%;
+    height: 80px;
+    object-fit: contain;
+    margin-bottom: 0.8rem;
+}
+
+/* ================= TEXT ================= */
+.category .box h3 {
+    font-size: 1.3rem;
+    color: #333;
+    text-transform: capitalize;
+}
+
+/* ================= PAGINATION ================= */
+.category-pagination {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.category-pagination .swiper-pagination-bullet {
+    background: #ccc;
+    opacity: 1;
+}
+
+.category-pagination .swiper-pagination-bullet-active {
+    background: #ff6b6b;
+}
+
+/* ================= RESPONSIVE ================= */
+
+/* MOBILE */
+@media (max-width: 768px) {
+    .category .box {
+        max-width: 140px;
+        padding: 0.8rem;
+    }
+
+    .category .box img {
+        height: 60px;
+    }
+
+    .category .box h3 {
+        font-size: 1.1rem;
+    }
+}
+
+/* TABLET */
+@media (min-width: 769px) and (max-width: 991px) {
+    .category .box {
+        max-width: 160px;
+    }
+}
+
+/* DESKTOP → 4 ITEMS CLEAN */
+@media (min-width: 992px) {
+    .category .swiper-slide {
+        width: 25% !important; /* 🔥 FORCE 4 ITEMS */
+    }
+}

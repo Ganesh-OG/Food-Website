@@ -19,9 +19,9 @@ const FALLBACK = {
         image: "images/about-img.svg"
     },
     steps: [
-        { section: "step1", title: "Choose", image: "images/step-1.png" },
-        { section: "step2", title: "Pay", image: "images/step-2.png" },
-        { section: "step3", title: "Eat", image: "images/step-3.png" }
+        { section: "step1", title: "Choose", image: "images/choose1.gif" },
+        { section: "step2", title: "Pay", image: "images/pay.gif" },
+        { section: "step3", title: "Eat", image: "images/eatfood.gif" }
     ]
 };
 

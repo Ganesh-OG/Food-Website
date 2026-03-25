@@ -9,6 +9,7 @@
    <link rel="stylesheet" href="https://unpkg.com/swiper@8/swiper-bundle.min.css"/>
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
    <link rel="stylesheet" href="css/style.css">
+   <link rel="stylesheet" href="css/home.css">
 </head>
 
 <body>
@@ -20,6 +21,8 @@
 
 <!-- 🔥 HEADER -->
 <div id="headerContainer"></div>
+
+<main class="flex-grow">
 
 <!-- HERO -->
 <section class="hero">
@@ -34,29 +37,11 @@
 <section class="category">
    <h1 class="title">food category</h1>
 
-   <div class="box-container">
-
-      <a href="category.html?category=fast food" class="box">
-         <img src="images/cat-1.png">
-         <h3>fast food</h3>
-      </a>
-
-      <a href="category.html?category=main dish" class="box">
-         <img src="images/cat-2.png">
-         <h3>main dishes</h3>
-      </a>
-
-      <a href="category.html?category=drinks" class="box">
-         <img src="images/cat-3.png">
-         <h3>drinks</h3>
-      </a>
-
-      <a href="category.html?category=desserts" class="box">
-         <img src="images/cat-4.png">
-         <h3>desserts</h3>
-      </a>
-
+   <div class="swiper category-slider">
+      <div class="swiper-wrapper" id="categoryWrapper"></div>
+      <div class="swiper-pagination category-pagination"></div>
    </div>
+
 </section>
 
 <!-- PRODUCTS -->
@@ -69,12 +54,14 @@
    </div>
 </section>
 
+   </main>
+
 <!-- 🔥 FOOTER -->
 <div id="footerContainer"></div>
 
 <!-- LIBS -->
 <script src="https://unpkg.com/swiper@8/swiper-bundle.min.js"></script>
-<script src="js/script.js"></script>
+<script type="module" src="js/script.js"></script>
 
 <!-- MODULES -->
 <script type="module" src="components/JS/home.js"></script>

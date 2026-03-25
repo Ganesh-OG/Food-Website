@@ -32,11 +32,27 @@
    background-color: transparent;
 }
 
+.flex-grow {
+   flex: 1;
+   display: flex;
+   flex-direction: column;
+}
+
+#headerContainer {
+   flex: none;
+}
+
+#footerContainer {
+   flex: none;
+   margin-top: auto;
+}
+
 ::-webkit-scrollbar-thumb{
    background-color: var(--yellow);
 }
 
 html{
+   height: 100%;
    font-size: 62.5%;
    overflow-x: hidden;
    scroll-behavior: smooth;
@@ -44,7 +60,9 @@ html{
 }
 
 body {
-   min-height: 100vh;
+   height: 100vh;
+   display: flex;
+   flex-direction: column;
 }
 
 
