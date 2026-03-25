@@ -997,6 +997,9 @@ section{
    height: 25rem;
 }
 
+input::-ms-reveal {
+    display: none;
+}
 
 
 /* media queries  */
