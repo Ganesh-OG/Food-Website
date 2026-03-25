@@ -118,13 +118,13 @@ function createProductCard(product) {
         .getPublicUrl(`Products/${product.image}`).data.publicUrl;
 
     const card = document.createElement("div");
-    card.dataset.productId = product.id;  // 🔑 For realtime targeting
+    card.dataset.productId = product.id;
     if (isOut) card.classList.add("out-stock");
     card.className = "box";
 
     card.innerHTML = `
         <div class="img-wrapper">
-            <img src="${img}">
+            <img src="${img}" style="${isOut ? 'filter: grayscale(100%); opacity:0.6;' : ''}">
         </div>
 
         <div style="flex:1">
