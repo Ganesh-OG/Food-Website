@@ -125,7 +125,7 @@ window.startPaymentProcess = async () => {
 
     showLoader("⏳ Proceeding with checkout...");
 
-    // 🔥 STEP 5: ADD TO QUEUE (SAFE)
+    // 🔥 STEP 5: ADD TO QUEUE
     const { error: queueError } = await supabase
         .from("order_queue")
         .upsert({
@@ -181,15 +181,16 @@ async function waitForTurn(email) {
 
             hideLoader();
 
-            // ❌ HARD ERROR (404 / permission / missing RPC)
+            // ❌ HARD ERROR
             if (error) {
                 showPopup(error.message || "Order failed");
                 isProcessing = false;
                 return;
             }
 
-            // ❌ BUSINESS ERROR (from DB)
-            if (data !== "SUCCESS") {
+            // ❌ BUSINESS ERROR
+            if (!data || !data.startsWith("SUCCESS")) {
+
                 showPopup(data);
 
                 isProcessing = false;
@@ -203,7 +204,9 @@ async function waitForTurn(email) {
             }
 
             // ✅ SUCCESS
-            showPopup("✅ Order placed successfully!");
+            const orderId = data.split("|")[1];
+
+            showPopup(`✅ Order placed successfully!\n🆔 ${orderId}`);
 
             await supabase
                 .from("order_queue")
@@ -212,6 +215,7 @@ async function waitForTurn(email) {
 
             localStorage.removeItem("paymentSelected");
 
+            // 🔥 AUTO REFRESH (cart clears)
             setTimeout(() => location.reload(), 1500);
         }
 
