@@ -1,54 +1,27 @@
 // components/JS/login.js
-
 import { supabase } from "./config.js";
 
 document.addEventListener("DOMContentLoaded", () => {
+
     const form = document.getElementById("loginForm");
     const passwordField = document.getElementById("password");
     const eyeIcon = document.getElementById("eyeIcon");
-    const formBox = document.getElementById("formBox");
 
     const popup = document.getElementById("errorPopup");
     const popupMsg = document.getElementById("popupMessage");
-    const closeBtn = document.getElementById("closeBtn");
 
-    // ================= POPUP =================
-    function showPopup(message, type = "error") {
-        popup.classList.remove("popup-error", "popup-success");
-
-        if (type === "success") {
-            popup.classList.add("popup-success");
-        } else {
-            popup.classList.add("popup-error");
-        }
-
-        popupMsg.textContent = message;
+    function showPopup(msg, type = "error") {
+        popup.className = type === "success" ? "popup-success" : "popup-error";
+        popupMsg.textContent = msg;
         popup.style.display = "flex";
-
-        // prevent overlap issues
-        clearTimeout(popup.hideTimer);
-
-        popup.hideTimer = setTimeout(() => {
-            popup.style.display = "none";
-        }, 2000);
+        setTimeout(() => popup.style.display = "none", 2000);
     }
 
-    closeBtn.addEventListener("click", () => {
-        popup.style.display = "none";
-    });
+    eyeIcon.onclick = () => {
+        passwordField.type =
+            passwordField.type === "password" ? "text" : "password";
+    };
 
-    // ================= EYE TOGGLE =================
-    eyeIcon.addEventListener("click", () => {
-        if (passwordField.type === "password") {
-            passwordField.type = "text";
-            eyeIcon.classList.replace("fa-eye-slash", "fa-eye");
-        } else {
-            passwordField.type = "password";
-            eyeIcon.classList.replace("fa-eye", "fa-eye-slash");
-        }
-    });
-
-    // ================= LOGIN =================
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -58,52 +31,80 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
             let user = null;
 
-            let { data, error } = await supabase
+            // Email login
+            let res = await supabase
                 .from("users")
                 .select("*")
                 .ilike("email", input)
                 .eq("password", password)
                 .maybeSingle();
 
-            if (error) throw error;
-            user = data;
+            user = res.data;
 
+            // ID login
             if (!user) {
-                const res = await supabase
+                res = await supabase
                     .from("users")
                     .select("*")
                     .ilike("id", input)
                     .eq("password", password)
                     .maybeSingle();
 
-                if (res.error) throw res.error;
                 user = res.data;
             }
 
-            if (!user) {
-                showPopup("Invalid Username or Password");
+            if (!user) return showPopup("Invalid login");
 
-                formBox.classList.add("shake");
-                setTimeout(() => formBox.classList.remove("shake"), 300);
-                return;
+            // ================= RBAC =================
+            const { data: roleData } = await supabase
+                .from("roles")
+                .select("role_powers")
+                .eq("role_name", user.role)
+                .single();
+
+            const rolePowers = roleData?.role_powers || [];
+            const userPowers = user.additional_powers || [];
+
+            let finalPowers;
+
+            if (user.role === "Custom Role") {
+                finalPowers = userPowers;
+            } else {
+                finalPowers = [...new Set([...rolePowers, ...userPowers])];
             }
 
+            // Store
             localStorage.setItem("user", JSON.stringify(user));
+            localStorage.setItem("powers", JSON.stringify(finalPowers));
 
             showPopup("Login Successful", "success");
 
+            // ================= ROUTING =================
             setTimeout(() => {
-                if (user.role === "student") {
+                const role = user.role?.toLowerCase();
+                const type = user.user_type?.toLowerCase();
+
+                const adminRoles = [
+                    "admin",
+                    "manager",
+                    "sales staff",
+                    "billing staff",
+                    "custom role"
+                ];
+
+                if (type === "external" || role === "student") {
                     window.location.href = "home.html";
-                } else if (user.role === "admin") {
-                    window.location.href = "admin/orders.html";
+                } else if (adminRoles.includes(role)) {
+                    window.location.href = "admin/select-mode.html";;
+                } else {
+                    window.location.href = "home.html";
                 }
-            }, 1200);
+
+            }, 1000);
 
         } catch (err) {
             console.error(err);
-            showPopup("Something went wrong!");
+            showPopup("Error occurred");
         }
     });
-
 });

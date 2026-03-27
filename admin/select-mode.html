@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Select Mode</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="CSS/select-mode.css">
+</head>
+
+<body>
+
+<div class="box">
+    <h2>Select Mode</h2>
+
+    <div class="user-info">
+        <div id="userEmail"></div>
+        <div id="userRole"></div>
+    </div>
+
+    <p>How do you want to continue?</p>
+
+    <button class="user-btn" onclick="goUser()">User View</button>
+    <button id="adminBtn" class="admin-btn" onclick="goAdmin()">Admin Panel</button>
+</div>
+
+<script type="module">
+
+import { supabase } from "../components/JS/config.js";
+
+const user = JSON.parse(localStorage.getItem("user"));
+
+// 🔒 If no user → redirect
+if (!user?.id) {
+    window.location.href = "../login.html";
+}
+
+const adminBtn = document.getElementById("adminBtn");
+
+// ✅ Only check access (no UI details)
+async function checkAccess() {
+
+    const { data } = await supabase
+        .from("users")
+        .select("role, user_type")
+        .eq("id", user.id)
+        .single();
+
+    const adminRoles = [
+        "admin",
+        "manager",
+        "sales staff",
+        "billing staff",
+        "custom role"
+    ];
+
+    const role = data?.role?.toLowerCase();
+    const type = data?.user_type?.toLowerCase();
+
+    if (type === "external" || !adminRoles.includes(role)) {
+        adminBtn.classList.add("disabled");
+        adminBtn.disabled = true;
+        adminBtn.textContent = "Admin Access Restricted";
+    }
+}
+
+// 🔁 Navigation
+window.goUser = function () {
+    window.location.href = "../home.html";
+};
+
+window.goAdmin = function () {
+    window.location.href = "./admin.html";
+};
+
+// 🚀 Run
+checkAccess();
+
+</script>
+
+</body>
+</html>
