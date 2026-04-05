@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu</title>
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/menu.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div id="headerContainer"></div>
+
+<!-- HEADING -->
+<div class="heading">
+    <h3>Explore Menu</h3>
+</div>
+
+<!-- PRODUCTS -->
+<section class="products">
+
+    <div id="categoryTabs" class="category-tabs"></div>
+    <div class="box-container" id="menuContainer"></div>
+
+</section>
+
+<!-- CART BAR -->
+<div id="cartBar" class="cart-bar">
+    <span id="cartText">0 items</span>
+    <button onclick="window.location.href='cart.html'">VIEW CART</button>
+</div>
+<div id="toast" class="toast">
+    <span id="toastMsg"></span>
+</div>
+<!-- FOOTER -->
+<div id="footerContainer"></div>
+<script type="module" src="js/script.js"></script>
+<script type="module" src="components/JS/header_loader.js"></script>
+<script type="module" src="components/JS/user_header.js"></script>
+<script type="module" src="components/JS/footer.js"></script>
+<script type="module" src="components/JS/menu.js"></script>
+
+
+</body>
+</html>

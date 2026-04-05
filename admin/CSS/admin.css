@@ -1,0 +1,72 @@
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+        }
+
+        .header {
+            background: #1e1e2f;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h2 {
+            margin: 0;
+        }
+
+        .logout-btn {
+            background: #ff4d4d;
+            border: none;
+            padding: 8px 12px;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .container {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: #2c2c3e;
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+
+        .sidebar button {
+            width: 100%;
+            margin: 8px 0;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            background: #3d3d5c;
+            color: white;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .sidebar button:hover {
+            background: #57577a;
+        }
+
+        .content {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .title {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }

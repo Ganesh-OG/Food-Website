@@ -1,0 +1,74 @@
+/* about.html specific styles - Steps match footer glassmorphism */
+
+/* Steps Section - Exact footer match */
+.steps {
+  padding: 4rem 2rem;
+}
+
+.steps .title {
+  text-align: center;
+  font-size: 3rem;
+  color: var(--black);
+  margin-bottom: 3rem;
+}
+
+.steps .box-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(25rem, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+.steps .box-container .box {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(14px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.steps .box-container .box img {
+  width: 7rem;
+  height: auto;
+  max-height: 7rem;
+  object-fit: contain;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.steps .box-container .box h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--black);
+  text-transform: capitalize;
+}
+
+.steps .box-container .box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .steps .box-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .steps .title {
+    font-size: 2.5rem;
+  }
+  
+  .steps .box-container .box {
+    max-width: none;
+  }
+}
+
