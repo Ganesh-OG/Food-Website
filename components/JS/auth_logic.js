@@ -257,7 +257,7 @@ export async function sendPasswordResetOtp(email) {
     try {
         const { data: existingUser, error } = await supabase
             .from("users")
-            .select("id, email, password")
+            .select("id, name, email, password")
             .ilike("email", normalizedEmail)
             .maybeSingle();
 
@@ -276,7 +276,7 @@ export async function sendPasswordResetOtp(email) {
                 otp,
                 otp_created_at: otpCreatedAt
             })
-            .eq("email", normalizedEmail);
+            .eq("id", existingUser.id);
 
         if (updateError) {
             console.error("Password reset OTP update failed:", updateError);
@@ -324,7 +324,7 @@ export async function resetUserPassword({ email, password, confirmPassword }) {
     try {
         const { data: existingUser, error: existingUserError } = await supabase
             .from("users")
-            .select("email, password")
+            .select("id, email, password")
             .ilike("email", normalizedEmail)
             .maybeSingle();
 
@@ -346,7 +346,7 @@ export async function resetUserPassword({ email, password, confirmPassword }) {
                 last_reset_by: normalizedEmail,
                 last_reset_at: new Date().toISOString()
             })
-            .eq("email", normalizedEmail)
+            .eq("id", existingUser.id)
             .select("*")
             .single();
 
@@ -410,7 +410,7 @@ async function verifyOtpAgainstUsersTable({ email, token }) {
                 .update({
                     otp: "Expired"
                 })
-                .eq("email", normalizedEmail);
+                .eq("id", pendingUser.id);
 
             return { ok: false, message: "OTP expired. Generate a new OTP." };
         }
@@ -421,7 +421,7 @@ async function verifyOtpAgainstUsersTable({ email, token }) {
                 otp: null,
                 otp_created_at: null
             })
-            .eq("email", normalizedEmail);
+            .eq("id", pendingUser.id);
 
         if (updateError) {
             console.error("Verify OTP update failed:", updateError);
