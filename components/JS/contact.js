@@ -1,6 +1,7 @@
 import { supabase } from "./config.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
+    console.log("[contact.js] DOMContentLoaded");
     await loadContact();
     subscribeToRealtimeUpdates();
     setupForm();
@@ -9,7 +10,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ================= IMAGE =================
 function getImageUrl(fileName) {
     if (!fileName) return null;
-    return `https://plojfgqvvojpushcatsn.supabase.co/storage/v1/object/public/Food-Website-Storage/Contact/${fileName}`;
+    const cleanFileName = String(fileName).trim();
+    if (!cleanFileName) return null;
+
+    const { data } = supabase
+        .storage
+        .from("Food-Website-Storage")
+        .getPublicUrl(`Contact/${cleanFileName}`);
+
+    console.log("[contact.js] Storage image path:", `Contact/${cleanFileName}`);
+    console.log("[contact.js] Storage public URL:", data?.publicUrl || null);
+    return data?.publicUrl || null;
 }
 
 // ================= FALLBACK =================
@@ -23,46 +34,54 @@ const FALLBACK = {
 // ================= LOAD =================
 async function loadContact() {
     try {
+        console.log("[contact.js] Loading contact_config...");
         const { data, error } = await supabase
-            .from("about_content")
+            .from("contact_config")
             .select("*");
 
+        console.log("[contact.js] contact_config response:", { data, error });
+
         if (error || !data || data.length === 0) {
+            console.warn("[contact.js] No usable contact_config rows. Falling back.");
             return renderFallback();
         }
 
-        const requiredSections = ["contact"];
+        const contact = pickContactConfig(data);
+        console.log("[contact.js] Selected contact row:", contact);
+        if (!contact) {
+            console.warn("[contact.js] No enabled Primary/Secondary row found. Falling back.");
+            return renderFallback();
+        }
 
-        const anyDisabled = requiredSections.some(section => {
-            const item = data.find(d =>
-                (d.section || "").toLowerCase() === section.toLowerCase()
-            );
-            return !item || (item.Status || "").toLowerCase() !== "enabled";
-        });
-
-        if (anyDisabled) return renderFallback();
-
-        renderDbContent(data);
+        renderDbContent(contact);
 
     } catch (err) {
+        console.error("[contact.js] loadContact failed:", err);
         renderFallback();
     }
 }
 
 // ================= RENDER =================
-function renderDbContent(data) {
-    const contact = data.find(d =>
-        (d.section || "").toLowerCase() === "contact"
-    );
+function renderDbContent(contact) {
+    if (!contact) {
+        return renderFallback();
+    }
 
-    document.getElementById("contactTitle").textContent = contact.title;
+    const imageUrl = getImageUrl(contact.image_path) || FALLBACK.contact.image;
+    console.log("[contact.js] Rendering DB content:", {
+        title: contact.title,
+        image_path: contact.image_path,
+        imageUrl
+    });
 
-    document.getElementById("contactImage").src =
-        getImageUrl(contact.image_path) || FALLBACK.contact.image;
+    document.getElementById("contactTitle").textContent = contact.title || FALLBACK.contact.title;
+
+    document.getElementById("contactImage").src = imageUrl;
 }
 
 // ================= FALLBACK =================
 function renderFallback() {
+    console.warn("[contact.js] Rendering fallback content:", FALLBACK.contact);
     document.getElementById("contactTitle").textContent = FALLBACK.contact.title;
     document.getElementById("contactImage").src = FALLBACK.contact.image;
 }
@@ -216,8 +235,52 @@ function subscribeToRealtimeUpdates() {
         .channel("contact-updates")
         .on(
             "postgres_changes",
-            { event: "*", schema: "public", table: "about_content" },
+            { event: "*", schema: "public", table: "contact_config" },
             () => loadContact()
         )
         .subscribe();
+}
+
+function pickContactConfig(rows) {
+    const normalizedRows = Array.isArray(rows) ? rows : [];
+    console.log("[contact.js] Evaluating rows for Primary/Secondary:", normalizedRows);
+
+    const primary = normalizedRows.find(row =>
+        getContactStage(row) === "primary"
+    );
+    console.log("[contact.js] Primary row:", primary);
+
+    if (isEnabledContactConfig(primary)) {
+        console.log("[contact.js] Using Primary row");
+        return primary;
+    }
+
+    const secondary = normalizedRows.find(row =>
+        getContactStage(row) === "secondary"
+    );
+    console.log("[contact.js] Secondary row:", secondary);
+
+    if (isEnabledContactConfig(secondary)) {
+        console.log("[contact.js] Using Secondary row");
+        return secondary;
+    }
+
+    console.warn("[contact.js] Neither Primary nor Secondary is enabled");
+    return null;
+}
+
+function isEnabledContactConfig(row) {
+    return Boolean(row) && getContactStatus(row) === "enabled";
+}
+
+function getContactStage(row) {
+    return String(row?.Stage ?? row?.stage ?? "")
+        .trim()
+        .toLowerCase();
+}
+
+function getContactStatus(row) {
+    return String(row?.status ?? row?.Status ?? "")
+        .trim()
+        .toLowerCase();
 }
