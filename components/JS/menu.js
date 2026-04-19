@@ -1,5 +1,6 @@
 import { supabase } from "./config.js";
 import "./add_cart.js";
+import { loadStoredCart, saveStoredCart, getCartCount } from "./cart_store.js";
 
 let currentFilter = null;
 let cartData = {};
@@ -39,49 +40,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // ================= LOAD CART =================
 async function loadCartFromDB() {
-
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user) return;
-
-    const { data } = await supabase
-        .from("cart")
-        .select("cart_items")
-        .eq("user_email", user.email)
-        .maybeSingle();
-
-    cartData = data?.cart_items || {};
+    cartData = await loadStoredCart(supabase);
 }
 
 // ================= UPDATE CART =================
 async function updateCartDB() {
-
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    await supabase
-        .from("cart")
-        .update({ cart_items: cartData })
-        .eq("user_email", user.email);
+    await saveStoredCart(supabase, cartData);
 }
 
 // ================= HEADER UPDATE =================
 async function updateHeaderFromDB() {
-
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user) return;
-
-    const { data } = await supabase
-        .from("cart")
-        .select("cart_items")
-        .eq("user_email", user.email)
-        .maybeSingle();
-
-    const cart = data?.cart_items || {};
-
-    let total = 0;
-    Object.values(cart).forEach(q => total += q);
+    const cart = await loadStoredCart(supabase);
+    const total = getCartCount(cart);
 
     const el = document.getElementById("cartCount");
-    if (el) el.textContent = total > 0 ? `(${total})` : "";
+    if (el) el.textContent = `(${total})`;
 }
 
 // ================= CART BAR =================

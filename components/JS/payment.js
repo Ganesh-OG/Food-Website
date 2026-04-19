@@ -1,6 +1,30 @@
 import { supabase } from "./config.js";
+import { showAuthPrompt } from "./auth_prompt.js";
 
 let isProcessing = false;
+
+async function getValidatedCheckoutUser() {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!user?.email) {
+        return null;
+    }
+
+    const { data, error } = await supabase
+        .from("users")
+        .select("email")
+        .eq("email", user.email)
+        .maybeSingle();
+
+    if (error || !data) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("powers");
+        localStorage.removeItem("paymentSelected");
+        return null;
+    }
+
+    return user;
+}
 
 
 // ================= POPUP =================
@@ -30,8 +54,13 @@ window.startPaymentProcess = async () => {
 
     if (isProcessing) return;
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user) return;
+    const user = await getValidatedCheckoutUser();
+    if (!user) {
+        showAuthPrompt({
+            message: "Sign in or register to place your order and complete checkout."
+        });
+        return;
+    }
 
     const payment = localStorage.getItem("paymentSelected");
 

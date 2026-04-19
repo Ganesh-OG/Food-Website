@@ -35,6 +35,9 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 2;
+            overflow: visible;
         }
 
         .item-header {
@@ -200,6 +203,7 @@
         color: white; /* Set text color to black */
         background-color: #00FFFF; /* Set default background color to #00FFFF */
         position: relative;
+        z-index: 20;
     }
 
     .custom-dropdown-selected {
@@ -211,6 +215,8 @@
     .custom-dropdown-options {
         display: none;
         position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
         background-color: #fff;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         border: 1px solid #ddd;
@@ -219,6 +225,11 @@
         padding: 0;
         margin: 0;
         width: 100%;
+        z-index: 30;
+    }
+
+    .payment-dropdown.is-hidden {
+        display: none;
     }
 
     .custom-dropdown-options li {
@@ -280,16 +291,16 @@
         border-radius: 5px;
     }
 
+    #footerContainer {
+        position: relative;
+        z-index: 1;
+    }
+
         
     </style>
 </head>
 
 <body>
-
-<script>
-const user = JSON.parse(localStorage.getItem("user"));
-if (!user) window.location.href = "index.html";
-</script>
 
 <div id="headerContainer"></div>
 
@@ -322,7 +333,7 @@ if (!user) window.location.href = "index.html";
    <br>
 
    <!-- ✅ FIXED DROPDOWN -->
-   <div class="custom-dropdown payment-dropdown"
+   <div class="custom-dropdown payment-dropdown is-hidden"
         id="paymentBox"
         data-wallet-balance="0"
         data-overall-total="0">

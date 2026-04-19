@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Register - Food Website</title>
+
+   <link rel="shortcut icon" href="images/ngplogo.jpg">
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+   <link rel="stylesheet" href="css/style.css">
+   <link rel="stylesheet" href="css/login.css">
+
+</head>
+
+<body style="display:flex; flex-direction:column; min-height:100vh;">
+   <script>
+      const existingUser = JSON.parse(localStorage.getItem("user"));
+      if (existingUser) {
+         const redirectTarget = new URLSearchParams(window.location.search).get("redirect") || "index.html";
+         window.location.replace(redirectTarget);
+      }
+   </script>
+   <main class="flex-grow">
+      <div class="login-container">
+         <div class="login-box" id="formBox">
+            <img src="images/ngplogo.jpg" alt="Logo" class="login-logo">
+            <h2>Create Account</h2>
+            <p class="login-subtitle">Register once, then browse, add items, and checkout whenever you want.</p>
+
+            <form id="registerForm">
+               <div class="register-grid">
+                  <div class="form-group full-width">
+                     <input type="text" id="name" placeholder="Full Name" required>
+                  </div>
+
+                  <div class="form-group full-width">
+                     <input type="email" id="email" placeholder="Email Address" required>
+                  </div>
+
+                  <div class="form-group">
+                     <input type="date" id="dob">
+                     <span class="field-note">Optional date of birth</span>
+                  </div>
+               </div>
+
+               <button type="submit" class="btn-login">Send OTP</button>
+            </form>
+
+            <div id="otpSection" class="otp-section" style="display:none;">
+               <p class="otp-title">Verify Your Email</p>
+               <p class="otp-subtitle">Enter the OTP sent to <span id="otpEmailPreview"></span></p>
+
+               <div class="form-group">
+                  <input type="text" id="otpCode" placeholder="Enter OTP" inputmode="numeric" maxlength="6">
+               </div>
+
+               <div class="otp-actions">
+                  <button type="button" class="btn-login" id="verifyOtpBtn">Verify OTP</button>
+                  <button type="button" class="guest-link-btn secondary otp-secondary-btn" id="resendOtpBtn">Resend OTP</button>
+               </div>
+            </div>
+
+            <div id="passwordSection" class="otp-section" style="display:none;">
+               <p class="otp-title">Set Your Password</p>
+               <p class="otp-subtitle">Email verified. Create your password to finish registration.</p>
+
+               <div class="form-group full-width">
+                  <input type="password" id="password" placeholder="Password">
+                  <i class="fas fa-eye-slash" id="passwordEyeIcon"></i>
+               </div>
+
+               <div class="form-group full-width">
+                  <input type="password" id="confirmPassword" placeholder="Confirm Password">
+                  <i class="fas fa-eye-slash" id="confirmPasswordEyeIcon"></i>
+               </div>
+
+               <button type="button" class="btn-login" id="completeRegistrationBtn">Create Account</button>
+            </div>
+
+            <p class="guest-links-label">Already registered?</p>
+            <div class="guest-links guest-links-actions">
+               <a href="signin.html" class="guest-link-btn primary">Login</a>
+               <a href="index.html" class="guest-link-btn secondary">Continue Shopping</a>
+            </div>
+
+            <p class="helper-text">New public users are created as standard customer accounts and can start checkout immediately after signup.</p>
+         </div>
+      </div>
+   </main>
+
+   <div id="errorPopup">
+      <span id="popupMessage"></span>
+      <button id="closeBtn" style="background: none; border: none; float: right; cursor: pointer; font-size: 1.2rem;">&times;</button>
+   </div>
+
+   <script type="module" src="js/script.js"></script>
+   <script type="module" src="components/JS/register.js"></script>
+</body>
+</html>

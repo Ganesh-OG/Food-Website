@@ -1,14 +1,13 @@
-// components/JS/login.js
-import { supabase } from "./config.js";
+import { authenticateUser, getPostAuthRedirect } from "./auth_logic.js";
 
 document.addEventListener("DOMContentLoaded", () => {
-
     const form = document.getElementById("loginForm");
     const passwordField = document.getElementById("password");
     const eyeIcon = document.getElementById("eyeIcon");
 
     const popup = document.getElementById("errorPopup");
     const popupMsg = document.getElementById("popupMessage");
+    const redirectTarget = new URLSearchParams(window.location.search).get("redirect");
 
     function showPopup(msg, type = "error") {
         popup.className = type === "success" ? "popup-success" : "popup-error";
@@ -18,8 +17,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     eyeIcon.onclick = () => {
-        passwordField.type =
-            passwordField.type === "password" ? "text" : "password";
+        const isHidden = passwordField.type === "password";
+        passwordField.type = isHidden ? "text" : "password";
+        eyeIcon.classList.toggle("fa-eye", isHidden);
+        eyeIcon.classList.toggle("fa-eye-slash", !isHidden);
     };
 
     form.addEventListener("submit", async (e) => {
@@ -29,57 +30,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const password = passwordField.value.trim();
 
         try {
-            let user = null;
+            const result = await authenticateUser({ input, password });
 
-            // Email login
-            let res = await supabase
-                .from("users")
-                .select("*")
-                .ilike("email", input)
-                .eq("password", password)
-                .maybeSingle();
+            if (!result.ok) return showPopup(result.message);
 
-            user = res.data;
-
-            // ID login
-            if (!user) {
-                res = await supabase
-                    .from("users")
-                    .select("*")
-                    .ilike("id", input)
-                    .eq("password", password)
-                    .maybeSingle();
-
-                user = res.data;
-            }
-
-            if (!user) return showPopup("Invalid login");
-
-            // ================= RBAC =================
-            const { data: roleData } = await supabase
-                .from("roles")
-                .select("role_powers")
-                .eq("role_name", user.role)
-                .single();
-
-            const rolePowers = roleData?.role_powers || [];
-            const userPowers = user.additional_powers || [];
-
-            let finalPowers;
-
-            if (user.role === "Custom Role") {
-                finalPowers = userPowers;
-            } else {
-                finalPowers = [...new Set([...rolePowers, ...userPowers])];
-            }
-
-            // Store
-            localStorage.setItem("user", JSON.stringify(user));
-            localStorage.setItem("powers", JSON.stringify(finalPowers));
+            const { user } = result;
 
             showPopup("Login Successful", "success");
 
-            // ================= ROUTING =================
             setTimeout(() => {
                 const role = user.role?.toLowerCase();
                 const type = user.user_type?.toLowerCase();
@@ -93,15 +51,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 ];
 
                 if (type === "external" || role === "student") {
-                    window.location.href = "home.html";
+                    window.location.href = getPostAuthRedirect(redirectTarget);
                 } else if (adminRoles.includes(role)) {
-                    window.location.href = "admin/select-mode.html";;
+                    window.location.href = "admin/select-mode.html";
                 } else {
-                    window.location.href = "home.html";
+                    window.location.href = getPostAuthRedirect(redirectTarget);
                 }
-
             }, 1000);
-
         } catch (err) {
             console.error(err);
             showPopup("Error occurred");

@@ -1,38 +1,111 @@
 import { supabase } from "./config.js";
+import { showAuthPrompt } from "./auth_prompt.js";
 
 let isOpen = false;
+let ordersData = [];
+
+const STATUS_LABELS = {
+    "Order Pending": "Pending Orders",
+    "Complete": "Completed Orders",
+    "Cancelled": "Cancelled Orders"
+};
 
 
-// ================= INIT (header/footer now loaded by user_header.js/footer.js) =================
+// ================= INIT =================
 document.addEventListener("DOMContentLoaded", () => {
     loadOrders();
 });
 
 
+// ================= HELPERS =================
+function getOrdersContainer() {
+    return document.getElementById("ordersContainer");
+}
 
+function getEmptyState() {
+    return document.getElementById("ordersEmptyState");
+}
+
+function ensureEmptyState() {
+    const container = getOrdersContainer();
+    if (!container) return null;
+
+    let emptyState = getEmptyState();
+    if (emptyState) return emptyState;
+
+    emptyState = document.createElement("p");
+    emptyState.id = "ordersEmptyState";
+    emptyState.className = "empty";
+    emptyState.style.display = "none";
+    container.appendChild(emptyState);
+
+    return emptyState;
+}
+
+function showEmptyState(message) {
+    const emptyState = ensureEmptyState();
+    if (!emptyState) return;
+
+    emptyState.textContent = message;
+    emptyState.style.display = "block";
+}
+
+function hideEmptyState() {
+    const emptyState = getEmptyState();
+    if (emptyState) emptyState.style.display = "none";
+}
+
+function hideAllOrders() {
+    document.querySelectorAll("#ordersContainer .box").forEach(box => {
+        box.style.display = "none";
+    });
+}
+
+function updateEmptyStateFor(status = "") {
+    const totalOrders = ordersData.length;
+
+    if (!status) {
+        if (totalOrders === 0) {
+            showEmptyState("No Orders");
+        } else {
+            hideEmptyState();
+        }
+        return;
+    }
+
+    const matchingOrders = ordersData.filter(order => order.status === status);
+    if (matchingOrders.length === 0) {
+        showEmptyState(`No Orders in ${STATUS_LABELS[status]}`);
+    } else {
+        hideEmptyState();
+    }
+}
 
 
 // ================= LOAD ORDERS =================
 async function loadOrders() {
-
     const user = JSON.parse(localStorage.getItem("user"));
 
     if (!user) {
-        window.location.href = "index.html";
+        ordersData = [];
+        hideAllOrders();
+        showEmptyState("No Orders");
         return;
     }
 
-    const { data: orders } = await supabase
+    const { data: orders, error } = await supabase
         .from("orders")
         .select("*")
         .eq("email", user.email)
         .order("order_date", { ascending: false });
 
-    const container = document.getElementById("ordersContainer");
+    const container = getOrdersContainer();
+    if (!container) return;
+
     container.innerHTML = "";
+    ordersData = Array.isArray(orders) && !error ? orders : [];
 
-    orders.forEach(order => {
-
+    ordersData.forEach(order => {
         const div = document.createElement("div");
         div.className = "box";
         div.style.display = "none";
@@ -75,60 +148,74 @@ async function loadOrders() {
 
         container.appendChild(div);
     });
+
+    ensureEmptyState();
+    updateEmptyStateFor();
 }
 
 
 // ================= TOGGLE =================
 window.toggleButtons = function () {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user) {
+        showAuthPrompt({
+            title: "Sign in to view orders",
+            message: "Sign in or register to view your pending, completed, and cancelled orders.",
+            redirect: "orders.html",
+            preserveSourceCopy: true
+        });
+        return;
+    }
 
     const pending = document.getElementById("pendingBtn");
     const complete = document.getElementById("completeBtn");
     const cancel = document.getElementById("cancelBtn");
 
-    const boxes = document.querySelectorAll(".box");
+    if (!pending || !complete || !cancel) return;
 
     if (!isOpen) {
-
         pending.style.display = "inline-block";
         complete.style.display = "inline-block";
         cancel.style.display = "inline-block";
-
-        // Hide orders boxes only
-        document.querySelectorAll('#ordersContainer .box').forEach(b => b.style.display = "none");
-
+        hideAllOrders();
+        updateEmptyStateFor();
         isOpen = true;
-
-    } else {
-
-        pending.style.display = "none";
-        complete.style.display = "none";
-        cancel.style.display = "none";
-
-        // Hide orders boxes only
-        document.querySelectorAll('#ordersContainer .box').forEach(b => b.style.display = "none");
-
-        isOpen = false;
+        return;
     }
-};
 
+    pending.style.display = "none";
+    complete.style.display = "none";
+    cancel.style.display = "none";
+    hideAllOrders();
+    updateEmptyStateFor();
+    isOpen = false;
+};
 
 
 // ================= FILTER =================
 document.addEventListener("click", (e) => {
-
     if (e.target.id === "pendingBtn") filter("Order Pending");
     if (e.target.id === "completeBtn") filter("Complete");
     if (e.target.id === "cancelBtn") filter("Cancelled");
-
 });
 
-
 function filter(status) {
+    let visibleCount = 0;
 
     document.querySelectorAll("#ordersContainer .box").forEach(box => {
+        const currentStatus = box.querySelector(".order-status")?.dataset.status;
+        const shouldShow = currentStatus === status;
 
-        const s = box.querySelector(".order-status")?.dataset.status;
+        box.style.display = shouldShow ? "block" : "none";
 
-        box.style.display = (s === status) ? "block" : "none";
+        if (shouldShow) {
+            visibleCount++;
+        }
     });
+
+    if (visibleCount === 0) {
+        showEmptyState(`No Orders in ${STATUS_LABELS[status]}`);
+    } else {
+        hideEmptyState();
+    }
 }

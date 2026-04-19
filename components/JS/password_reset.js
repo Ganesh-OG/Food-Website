@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!localUser) {
         showPopup("Please login first");
-        setTimeout(() => window.location.href = "index.html", 2000);
+        setTimeout(() => window.location.href = "signin.html", 2000);
         return;
     }
 
@@ -226,7 +226,7 @@ function setupSubmit() {
             if (count < 0) {
                 clearInterval(interval);
                 localStorage.removeItem("user");
-                window.location.href = "index.html";
+                window.location.href = "signin.html";
             }
         }, 1000);
     });

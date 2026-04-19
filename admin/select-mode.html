@@ -31,7 +31,7 @@ const user = JSON.parse(localStorage.getItem("user"));
 
 // 🔒 If no user → redirect
 if (!user?.id) {
-    window.location.href = "../login.html";
+    window.location.href = "../signin.html";
 }
 
 const adminBtn = document.getElementById("adminBtn");
@@ -65,7 +65,7 @@ async function checkAccess() {
 
 // 🔁 Navigation
 window.goUser = function () {
-    window.location.href = "../home.html";
+    window.location.href = "../index.html";
 };
 
 window.goAdmin = function () {

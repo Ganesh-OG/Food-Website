@@ -1,4 +1,5 @@
 import { supabase } from "./config.js";
+import { getCurrentUser, loadStoredCart, saveStoredCart } from "./cart_store.js";
 
 
 // ================= POPUP =================
@@ -40,6 +41,7 @@ function updateCartCountUI(cartItems) {
         .reduce((sum, val) => sum + val, 0);
 
     cartCountEl.textContent = `(${total})`;
+    document.dispatchEvent(new Event("cart:updated"));
 }
 
 
@@ -66,13 +68,6 @@ window.addToCart = async function (product, qty) {
     const ok = await checkService();
     if (!ok) return;
 
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    if (!user) {
-        showPopup("Please login first", "error");
-        return;
-    }
-
     if (qty <= 0) {
         showPopup("Minimum quantity is 1", "error");
         return;
@@ -86,25 +81,15 @@ window.addToCart = async function (product, qty) {
     try {
 
         // 🔥 FETCH CART
-        const { data: cart } = await supabase
-            .from("cart")
-            .select("cart_items")
-            .eq("user_email", user.email)
-            .maybeSingle();
-
-        let cartItems = cart?.cart_items || {};
+        const user = getCurrentUser();
+        let cartItems = await loadStoredCart(supabase);
 
         // 🔥 UPDATE
         cartItems[product.id] =
             (cartItems[product.id] || 0) + qty;
 
         // 🔥 SAVE
-        const { error } = await supabase
-            .from("cart")
-            .upsert({
-                user_email: user.email,
-                cart_items: cartItems
-            });
+        const { error } = await saveStoredCart(supabase, cartItems);
 
         if (error) {
             showPopup("Error adding to cart", "error");
@@ -115,7 +100,12 @@ window.addToCart = async function (product, qty) {
         updateCartCountUI(cartItems);
 
         // ✅ SUCCESS POPUP
-        showPopup(`${qty} ${product.name} added to cart`, "success");
+        showPopup(
+            user
+                ? `${qty} ${product.name} added to cart`
+                : `${qty} ${product.name} added to cart as guest`,
+            "success"
+        );
 
     } catch (err) {
         console.error(err);

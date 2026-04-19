@@ -16,7 +16,7 @@ protectPage({ adminOnly: true });
 // 🚫 Prevent back navigation after logout
 window.history.pushState(null, "", window.location.href);
 window.onpopstate = function () {
-    window.location.href = "../index.html";
+    window.location.href = "../signin.html";
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const storedUser = getUser();
 
         if (!storedUser?.id) {
-            window.location.href = "../index.html"; // ✅ FIXED
+            window.location.href = "../signin.html"; // ✅ FIXED
             return;
         }
 

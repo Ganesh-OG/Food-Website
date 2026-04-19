@@ -1,4 +1,5 @@
 import { supabase } from "./config.js";
+import { showAuthPrompt } from "./auth_prompt.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
 
@@ -14,7 +15,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const localUser = JSON.parse(localStorage.getItem("user"));
 
     if (!localUser) {
-        window.location.href = "index.html";
+        showAuthPrompt({
+            title: "Sign in to view profile",
+            message: "Sign in or register to view your profile details.",
+            redirect: "profile.html",
+            preserveSourceCopy: true,
+            continueRedirect: "index.html",
+            closeRedirect: "index.html"
+        });
         return;
     }
 
@@ -40,20 +48,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             `Email: ${user.email || "N/A"}`;
 
         // ================= DEPARTMENT / USER TYPE =================
-        let displayDept = "N/A";
-
+        const departmentRow = document.getElementById("department")?.closest("p");
         if (user.user_type === "external") {
-            displayDept = "External User";
+            if (departmentRow) departmentRow.style.display = "none";
         } else {
-            displayDept = user.department || "N/A";
+            if (departmentRow) departmentRow.style.display = "";
+            document.getElementById("department").textContent =
+                `Department: ${user.department || "N/A"}`;
         }
 
-        document.getElementById("department").textContent =
-            `Department: ${displayDept}`;
-
-        // ================= ROLL NUMBER =================
+        // ================= USER ID / ROLL NUMBER =================
         document.getElementById("id").textContent =
-            `Roll Number: ${user.id || "N/A"}`;
+            user.user_type === "external"
+                ? `User ID: ${user.id || "N/A"}`
+                : `Roll Number: ${user.id || "N/A"}`;
 
         // ================= DOB =================
         if (user.dob) {

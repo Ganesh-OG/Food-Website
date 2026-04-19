@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Header</title>
+<link rel="stylesheet" href="css/admin-header.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+<header class="admin-header">
+  <div class="header-top">
+    <a href="home.html" class="logo">
+      <img src="../images/ngplogo.jpg" alt="NGP Logo">
+      <span>Canteen Admin</span>
+    </a>
+    
+    <div class="header-right">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search orders/products...">
+      </div>
+      
+      <div class="notifications">
+        <i class="fas fa-bell"></i>
+        <span class="badge">3</span>
+      </div>
+      
+      <div class="profile-btn">
+        <img src="../images/user-icon.png" alt="Profile">
+        <span id="profileName">Loading...</span>
+        <i class="fas fa-chevron-down"></i>
+      </div>
+    </div>
+  </div>
+
+  <nav class="admin-nav">
+    <a href="home.html" data-power="Power1">
+      <i class="fas fa-chart-line"></i>
+      <span>Dashboard</span>
+    </a>
+    
+    <a href="products.php" data-power="Power2">
+      <i class="fas fa-box"></i>
+      <span>Products</span>
+    </a>
+    
+    <a href="orders.php" data-power="Power1">
+      <i class="fas fa-shopping-bag"></i>
+      <span>Orders</span>
+    </a>
+    
+    <a href="wallet.php" data-power="Power7">
+      <i class="fas fa-wallet"></i>
+      <span>Wallet</span>
+    </a>
+    
+    <a href="messages.php" data-power="Power9">
+      <i class="fas fa-comments"></i>
+      <span>Messages</span>
+    </a>
+    
+    <a href="web-updates.php" data-power="Power13">
+      <i class="fas fa-cogs"></i>
+      <span>Site Control</span>
+    </a>
+    
+    <a href="../Final Supabase/select-mode.html" class="logout-link">
+      <i class="fas fa-sign-out-alt"></i>
+      <span>User Mode</span>
+    </a>
+  </nav>
+</header>
+
+<!-- Profile Dropdown -->
+<div class="profile-dropdown" id="profileDropdown">
+  <div class="profile-info">
+    <img src="../images/user-icon.png" alt="Profile">
+    <div>
+      <p id="profileFullName"></p>
+      <small id="profileRole"></small>
+    </div>
+  </div>
+  <a href="#" id="adminLogout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+</div>
+
+<script type="module" src="js/admin-header.js"></script>
+</body>
+</html>
+

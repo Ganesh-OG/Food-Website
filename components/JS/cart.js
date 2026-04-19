@@ -1,9 +1,39 @@
 import { supabase } from "./config.js";
+import { showAuthPrompt } from "./auth_prompt.js";
+import { getCurrentUser, loadStoredCart, saveStoredCart, getCartCount } from "./cart_store.js";
 
 let cartData = {};
 let walletBalance = 0;
 let overallTotal = 0;
 let isServiceWorking = true;
+
+function notifyCartUpdated() {
+    document.dispatchEvent(new Event("cart:updated"));
+}
+
+async function getValidatedCheckoutUser() {
+    const user = getCurrentUser();
+
+    if (!user?.email) {
+        return null;
+    }
+
+    const { data, error } = await supabase
+        .from("users")
+        .select("email, balance")
+        .eq("email", user.email)
+        .maybeSingle();
+
+    if (error || !data) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("powers");
+        localStorage.removeItem("paymentSelected");
+        return null;
+    }
+
+    walletBalance = Number(data.balance || 0);
+    return user;
+}
 
 
 // ================= LOAD HEADER + FOOTER =================
@@ -37,15 +67,14 @@ function showPopup(message) {
 // ================= INIT =================
 document.addEventListener("DOMContentLoaded", async () => {
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (!user) {
-        window.location.href = "index.html";
-        return;
+    await checkService();
+    const user = getCurrentUser();
+
+    if (user?.email) {
+        await loadUser(user.email);
     }
 
-    await checkService();
-    await loadUser(user.email);
-    await loadCart(user.email);
+    await loadCart();
     setupDropdown();
     blockCartInteractions();
 
@@ -148,7 +177,7 @@ async function loadUser(email) {
 
 
 // ================= CART =================
-async function loadCart(email) {
+async function loadCart() {
 
     const container = document.getElementById("cartContainer");
     if (!container) return;
@@ -156,19 +185,15 @@ async function loadCart(email) {
     container.innerHTML = "";
     overallTotal = 0;
 
-    const { data } = await supabase
-        .from("cart")
-        .select("cart_items")
-        .eq("user_email", email)
-        .maybeSingle();
+    cartData = await loadStoredCart(supabase);
+    notifyCartUpdated();
 
-    if (!data || !data.cart_items) {
+    if (Object.keys(cartData).length === 0) {
         const empty = document.getElementById("emptyMsg");
         if (empty) empty.style.display = "block";
+        updateCheckoutState();
         return;
     }
-
-    cartData = data.cart_items;
 
     const ids = Object.keys(cartData);
 
@@ -220,11 +245,23 @@ async function loadCart(email) {
     if (totalText) {
         totalText.textContent = `Overall Total: ₹${overallTotal}`;
     }
+
+    updateCheckoutState();
 }
 
 
 // ================= CHECKOUT =================
 async function proceedPayment() {
+
+    const user = await getValidatedCheckoutUser();
+
+    if (!user) {
+        updateCheckoutState();
+        showAuthPrompt({
+            message: "Your cart is ready. Sign in or register when you want to continue to checkout."
+        });
+        return;
+    }
 
     await checkService();
 
@@ -303,15 +340,14 @@ window.removeItem = async (id) => {
 
 
 async function updateCart() {
+    await saveStoredCart(supabase, cartData);
+    await loadCart();
+    notifyCartUpdated();
 
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    await supabase
-        .from("cart")
-        .update({ cart_items: cartData })
-        .eq("user_email", user.email);
-
-    location.reload();
+    const countEl = document.getElementById("cartCount");
+    if (countEl) {
+        countEl.textContent = `(${getCartCount(cartData)})`;
+    }
 }
 
 
@@ -327,6 +363,10 @@ function setupDropdown() {
     if (!selected || !options) return;
 
     selected.onclick = () => {
+        if (!getCurrentUser()) {
+            options.classList.remove('show-options');
+            return;
+        }
 
         if (!isServiceWorking) {
             showPopup("Canteen is not functioning at the moment");
@@ -337,9 +377,14 @@ function setupDropdown() {
     };
 
     options.onclick = (e) => {
-
-        const value = e.target.dataset.value;
+        const option = e.target.closest("li");
+        const value = option?.dataset.value;
         if (!value) return;
+
+        if (!getCurrentUser()) {
+            options.classList.remove("show-options");
+            return;
+        }
 
         if (!isServiceWorking) {
             showPopup("Canteen is not functioning at the moment");
@@ -357,11 +402,46 @@ function setupDropdown() {
             showPopup(`${value} not supported`);
         }
 
-        selected.innerText = e.target.innerText;
+        selected.innerText = option.innerText;
         selected.setAttribute("data-value", value);
-
-        localStorage.setItem("paymentSelected", value);
+        if (value === "Wallet") {
+            localStorage.setItem("paymentSelected", value);
+        } else {
+            localStorage.removeItem("paymentSelected");
+        }
 
         options.classList.remove("show-options");
     };
+
+    document.addEventListener("click", (event) => {
+        if (!dropdown.contains(event.target)) {
+            options.classList.remove("show-options");
+        }
+    });
+}
+
+function updateCheckoutState() {
+    const user = getCurrentUser();
+    const btn = document.getElementById("proceedToPaymentBtn");
+    const selected = document.querySelector(".custom-dropdown-selected");
+    const paymentBox = document.getElementById("paymentBox");
+    const options = document.querySelector(".custom-dropdown-options");
+
+    if (!btn || !selected || !paymentBox) return;
+
+    if (!user) {
+        btn.textContent = "Sign In to Checkout";
+        paymentBox.classList.add("is-hidden");
+        selected.textContent = "Choose Payment";
+        selected.setAttribute("data-value", "");
+        localStorage.removeItem("paymentSelected");
+        options?.classList.remove("show-options");
+        return;
+    }
+
+    paymentBox.classList.remove("is-hidden");
+    btn.textContent = "Proceed to Payment";
+    if (!selected.getAttribute("data-value")) {
+        selected.textContent = "Choose Payment";
+    }
 }
