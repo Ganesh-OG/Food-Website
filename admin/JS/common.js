@@ -1,40 +1,66 @@
 import { supabase } from "../../components/JS/config.js";
-import { canAccessAdmin, clearStoredSession, refreshStoredSession } from "../../components/JS/session.js";
+import { canAccessAdmin, clearStoredSession, refreshStoredSession, hasMasterControlPower } from "../../components/JS/session.js";
+
+const USER_MANAGEMENT_POWERS = [
+    "user_add",
+    "user_bulk_add",
+    "user_bulk_additon",
+    "user_add_admin",
+    "user_add_billing_staff",
+    "user_add_custom_role",
+    "user_add_manager",
+    "user_add_sales_staff",
+    "password_assist",
+    "default_password"
+];
 
 const NAV_ITEMS = [
     {
         key: "dashboard",
         label: "Dashboard",
+        icon: "fa-chart-line",
         href: "admin.html",
-        anyPowers: ["sales_dashboard", "product_view", "message_view", "wallet_access", "site_control", "footer_manage", "about_edit", "slider_manage"]
+        anyPowers: ["sales_dashboard"]
     },
     {
         key: "products",
         label: "Products",
+        icon: "fa-box-open",
         href: "products.html",
         anyPowers: ["product_view", "product_add", "product_edit", "product_disable_stock", "product_disable_qty"]
     },
     {
         key: "orders",
         label: "Orders",
+        icon: "fa-receipt",
         href: "orders.html",
-        anyPowers: ["sales_dashboard", "wallet_access"]
+        anyPowers: ["sales_dashboard"]
     },
     {
         key: "messages",
         label: "Messages",
+        icon: "fa-envelope-open-text",
         href: "messages.html",
         anyPowers: ["message_view", "message_reply", "message_delete", "message_mark_answered"]
     },
     {
         key: "wallet",
         label: "Wallet",
+        icon: "fa-wallet",
         href: "wallet.html",
-        anyPowers: ["wallet_access"]
+        anyPowers: ["wallet_view", "wallet_add_money"]
+    },
+    {
+        key: "users",
+        label: "Users",
+        icon: "fa-users-gear",
+        href: "users.html",
+        anyPowers: USER_MANAGEMENT_POWERS
     },
     {
         key: "updates",
-        label: "Website Updates",
+        label: "Updates",
+        icon: "fa-wand-magic-sparkles",
         href: "updates.html",
         anyPowers: ["site_control", "about_edit", "slider_manage", "footer_manage"]
     }
@@ -71,7 +97,7 @@ export async function renderAdminShell({
             <main class="mode-card">
                 <p class="eyebrow">Admin Access</p>
                 <h1>No Modules Assigned</h1>
-                <p class="subtle">Your role is recognized, but no admin powers are currently mapped to this account.</p>
+                <p class="subtle">This account does not have any admin modules enabled yet.</p>
                 <div class="mode-actions">
                     <a class="primary-link" href="../index.html">User Side</a>
                     <a class="secondary-link" href="./select-mode.html">Back</a>
@@ -89,6 +115,7 @@ export async function renderAdminShell({
 
     const nav = availableNav.map(item => `
         <a href="${item.href}" class="${item.key === activePage ? "active" : ""}">
+            <i class="fa-solid ${item.icon}" aria-hidden="true"></i>
             <span>${item.label}</span>
         </a>
     `).join("");
@@ -96,52 +123,70 @@ export async function renderAdminShell({
     mount.innerHTML = `
         <div class="admin-shell">
             <aside class="admin-sidebar">
-                <div class="brand-block">
-                    <p class="eyebrow">Food Website</p>
-                    <h1>Admin Control</h1>
-                    <p>Tiered access using roles plus additional powers from the users table.</p>
-                </div>
+                <a class="admin-mark" href="./select-mode.html" aria-label="Admin home">
+                    <span class="admin-mark-icon"><i class="fa-solid fa-utensils" aria-hidden="true"></i></span>
+                    <span class="admin-mark-copy">
+                        <strong>Admin</strong>
+                        <span>${escapeHtml(title)}</span>
+                    </span>
+                </a>
 
-                <div class="admin-sidebar-card">
-                    <div class="admin-sidebar-label">Signed in as</div>
-                    <div class="admin-sidebar-name">${escapeHtml(user.name || user.id || "Admin")}</div>
-                    <div class="admin-sidebar-role">${escapeHtml(user.role || "Admin")}</div>
-                    <div class="admin-sidebar-meta">${powers.length} active powers</div>
-                </div>
-
-                <nav class="admin-nav">${nav}</nav>
-
-                <div class="sidebar-note">
-                    Role-based navigation is live. Each screen and action now checks role powers plus user-specific additional powers.
-                </div>
+                <nav class="admin-nav" id="adminSidebarNav">${nav}</nav>
             </aside>
 
             <main class="admin-main">
                 <div class="admin-topbar">
-                    <div class="mode-switcher">
-                        <a class="mode-link" href="../index.html">User Side</a>
-                        <a class="mode-link active" href="./select-mode.html">Admin Side</a>
+                    <div class="admin-topbar-left">
+                        <div class="page-header">
+                            <div>
+                                <h2>${escapeHtml(title)}</h2>
+                                <p>${escapeHtml(subtitle)}</p>
+                            </div>
+                            <div class="header-actions">${actions}</div>
+                        </div>
                     </div>
 
                     <div class="admin-user-panel">
-                        <div class="admin-user-copy">
-                            <strong>${escapeHtml(user.name || user.id || "Admin")}</strong>
-                            <span>${escapeHtml(user.email || "")}</span>
-                        </div>
-                        <button class="btn-ghost" type="button" id="adminLogoutBtn">Logout</button>
-                    </div>
-                </div>
+                        <button class="admin-user-trigger" type="button" id="adminUserMenuToggle" aria-expanded="false" aria-controls="adminUserMenu">
+                            <span class="admin-user-avatar" aria-hidden="true">
+                                <i class="fa-solid fa-user"></i>
+                            </span>
+                            <span class="admin-user-trigger-icon" aria-hidden="true">
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </span>
+                        </button>
 
-                <div class="page-header">
-                    <div>
-                        <h2>${escapeHtml(title)}</h2>
-                        <p>${escapeHtml(subtitle)}</p>
+                        <div class="admin-user-menu" id="adminUserMenu" hidden>
+                            <div class="admin-user-copy">
+                                <strong>${escapeHtml(user.name || user.id || "Admin")}</strong>
+                                <span>${escapeHtml(user.email || "")}</span>
+                                <small>${escapeHtml(user.role || "Admin")} • ${powers.length} active powers</small>
+                            </div>
+
+                            <a class="btn-ghost icon-btn admin-user-profile-link" href="./profile.html">
+                                <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
+                                <span>Profile</span>
+                            </a>
+
+                            <div class="mode-switcher admin-user-mode-switcher">
+                                <a class="mode-link" href="../index.html">User Side</a>
+                                <a class="mode-link active" href="./select-mode.html">Admin Side</a>
+                            </div>
+
+                            <button class="btn-ghost icon-btn admin-user-logout" type="button" id="adminLogoutBtn">
+                                <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                                <span>Logout</span>
+                            </button>
+                        </div>
                     </div>
-                    <div class="header-actions">${actions}</div>
                 </div>
 
                 <section id="pageContent"></section>
             </main>
+
+            <nav class="admin-bottom-nav" aria-label="Mobile navigation">
+                ${nav}
+            </nav>
         </div>
     `;
 
@@ -150,15 +195,43 @@ export async function renderAdminShell({
         window.location.href = "../signin.html";
     });
 
+    const userMenuToggle = document.getElementById("adminUserMenuToggle");
+    const userMenu = document.getElementById("adminUserMenu");
+    const userPanel = userMenuToggle?.closest(".admin-user-panel");
+
+    if (userMenuToggle && userMenu && userPanel) {
+        const setOpen = (isOpen) => {
+            userPanel.classList.toggle("open", isOpen);
+            userMenu.hidden = !isOpen;
+            userMenuToggle.setAttribute("aria-expanded", String(isOpen));
+        };
+
+        userMenuToggle.addEventListener("click", () => {
+            setOpen(userMenu.hidden);
+        });
+
+        document.addEventListener("click", event => {
+            if (!userPanel.contains(event.target)) {
+                setOpen(false);
+            }
+        });
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                setOpen(false);
+            }
+        });
+    }
+
     return {
         root: document.getElementById("pageContent"),
         user,
         powers,
         hasPower(code) {
-            return powers.includes(code);
+            return hasMasterControl(powers) || powers.includes(String(code || "").trim().toLowerCase());
         },
         hasAnyPower(codes = []) {
-            return codes.some(code => powers.includes(code));
+            return hasMasterControl(powers) || codes.some(code => powers.includes(String(code || "").trim().toLowerCase()));
         }
     };
 }
@@ -169,19 +242,27 @@ function getAvailableNavItems(powers) {
 
 function isNavVisible(item, powers) {
     if (!item.anyPowers?.length) return true;
-    return item.anyPowers.some(code => powers.includes(code));
+    return hasMasterControl(powers) || item.anyPowers.some(code => powers.includes(String(code || "").trim().toLowerCase()));
 }
 
 function isAllowed(requiredPower, requiredAnyPower, powers) {
+    if (hasMasterControl(powers)) {
+        return true;
+    }
+
     if (requiredPower) {
-        return powers.includes(requiredPower);
+        return powers.includes(String(requiredPower || "").trim().toLowerCase());
     }
 
     if (requiredAnyPower?.length) {
-        return requiredAnyPower.some(code => powers.includes(code));
+        return requiredAnyPower.some(code => powers.includes(String(code || "").trim().toLowerCase()));
     }
 
     return true;
+}
+
+function hasMasterControl(powers = []) {
+    return hasMasterControlPower(powers);
 }
 
 export function showToast(message, type = "success") {
@@ -196,7 +277,7 @@ export function showToast(message, type = "success") {
 
     setTimeout(() => {
         toast.remove();
-    }, 2600);
+    }, 5000);
 }
 
 export function formatCurrency(value) {
@@ -215,6 +296,8 @@ export function escapeHtml(value) {
 export function getStatusClass(status) {
     const value = String(status || "").toLowerCase();
     if (value.includes("pending")) return "pending";
+    if (value.includes("read") || value.includes("reviewed")) return "complete";
+    if (value.includes("replied") || value.includes("resolved") || value.includes("answered")) return "enabled";
     if (value.includes("complete")) return "complete";
     if (value.includes("cancel")) return "cancelled";
     if (value.includes("working")) return "working";
@@ -257,9 +340,111 @@ export async function removeFromStorage(bucket, path) {
     if (error) throw error;
 }
 
+export async function moveInStorage(bucket, fromPath, toPath) {
+    const { error } = await supabase.storage
+        .from(bucket)
+        .move(fromPath, toPath);
+
+    if (error) throw error;
+}
+
 export function getStoragePublicUrl(bucket, path) {
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     return data.publicUrl;
+}
+
+let adminFilePickerId = 0;
+
+export function initAdminFilePickers(scope = document) {
+    const root = scope instanceof Element || scope instanceof Document ? scope : document;
+    const inputs = root.querySelectorAll('input[type="file"]:not([data-file-picker-bound])');
+
+    inputs.forEach(input => {
+        input.dataset.filePickerBound = "true";
+        input.classList.add("file-picker-input");
+
+        if (!input.id) {
+            adminFilePickerId += 1;
+            input.id = `adminFilePicker${adminFilePickerId}`;
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "file-picker";
+
+        const surface = document.createElement("div");
+        surface.className = "file-picker-surface";
+        surface.tabIndex = 0;
+        surface.setAttribute("role", "button");
+        surface.setAttribute("aria-controls", input.id);
+        surface.innerHTML = `
+            <span class="file-picker-copy">
+                <span class="file-picker-title">Choose file or drag and drop files</span>
+                <span class="file-picker-name">No file chosen</span>
+            </span>
+        `;
+
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input);
+        wrapper.appendChild(surface);
+
+        surface.addEventListener("click", () => input.click());
+        surface.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                input.click();
+            }
+        });
+
+        const updateState = () => {
+            const nameNode = wrapper.querySelector(".file-picker-name");
+            const titleNode = wrapper.querySelector(".file-picker-title");
+            const fileCount = input.files?.length || 0;
+
+            if (nameNode) {
+                nameNode.textContent = fileCount
+                    ? fileCount === 1
+                        ? input.files[0].name
+                        : `${fileCount} files selected`
+                    : "No file chosen";
+            }
+
+            if (titleNode) {
+                titleNode.textContent = fileCount ? "File ready to upload" : "Choose file or drag and drop files";
+            }
+
+            wrapper.classList.toggle("has-file", fileCount > 0);
+        };
+
+        input.addEventListener("change", updateState);
+
+        ["dragenter", "dragover"].forEach(eventName => {
+            surface.addEventListener(eventName, event => {
+                event.preventDefault();
+                wrapper.classList.add("is-dragover");
+            });
+        });
+
+        ["dragleave", "dragend", "drop"].forEach(eventName => {
+            surface.addEventListener(eventName, event => {
+                event.preventDefault();
+                wrapper.classList.remove("is-dragover");
+
+                if (eventName !== "drop") return;
+
+                const files = event.dataTransfer?.files;
+                if (!files?.length) return;
+
+                try {
+                    input.files = files;
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                } catch (error) {
+                    input.click();
+                }
+            });
+        });
+
+        updateState();
+    });
 }
 
 export function slugify(value) {

@@ -1,6 +1,6 @@
 import { supabase } from "./config.js";
 import { getCartCount, loadStoredCart } from "./cart_store.js";
-import { canAccessAdmin, clearStoredSession, getStoredPowers, getStoredUser } from "./session.js";
+import { canAccessAdmin, clearStoredSession, getStoredPowers, getStoredUser, refreshStoredSession } from "./session.js";
 
 let headerPoller = null;
 
@@ -99,8 +99,6 @@ function renderUserProfile(profile, user, powers) {
 
 async function initializeUserInfo() {
     try {
-        const user = getStoredUser();
-        const powers = getStoredPowers();
         const userBtn = document.getElementById("user-btn");
         const profile = document.getElementById("profileBox");
         const menuBtn = document.getElementById("menu-btn");
@@ -123,6 +121,15 @@ async function initializeUserInfo() {
         await syncHeaderCartCount();
 
         if (!profile) return;
+
+        let user = getStoredUser();
+        let powers = getStoredPowers();
+
+        if (user?.id) {
+            const refreshed = await refreshStoredSession();
+            user = refreshed.user;
+            powers = refreshed.powers;
+        }
 
         if (!user) {
             renderGuestProfile(profile);

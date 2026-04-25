@@ -15,9 +15,10 @@
 <body style="display:flex; flex-direction:column; min-height:100vh;">
    <script>
       const existingUser = JSON.parse(localStorage.getItem("user"));
+      const existingPowers = JSON.parse(localStorage.getItem("powers") || "[]");
       if (existingUser) {
          const role = String(existingUser.role || "").trim().toLowerCase();
-         const isAdminUser = ["admin", "manager", "sales staff", "billing staff", "custom role"].includes(role);
+         const isAdminUser = ["admin", "manager", "sales staff", "billing staff", "custom role"].includes(role) || existingPowers.length > 0;
          const redirectTarget = isAdminUser
             ? "admin/select-mode.html"
             : (new URLSearchParams(window.location.search).get("redirect") || "index.html");

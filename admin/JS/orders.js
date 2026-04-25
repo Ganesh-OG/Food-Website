@@ -9,18 +9,18 @@ document.addEventListener("DOMContentLoaded", initOrders);
 async function initOrders() {
     const view = await renderAdminShell({
         title: "Orders",
-        subtitle: "Order visibility is tied to sales access, while cancellation also respects wallet access.",
-        requiredAnyPower: ["sales_dashboard", "wallet_access"]
+        subtitle: "Order access is limited to roles that have the sales dashboard power.",
+        requiredPower: "sales_dashboard"
     });
 
     if (!view?.root) return;
 
     const { root, hasPower } = view;
     canCompleteOrders = hasPower("sales_dashboard");
-    canCancelOrders = hasPower("wallet_access");
+    canCancelOrders = hasPower("sales_dashboard");
 
     root.innerHTML = `
-        <div class="card">
+        <div class="card orders-card">
             <div class="toolbar">
                 <select id="statusFilter">
                     <option value="">All statuses</option>

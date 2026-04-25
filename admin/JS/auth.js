@@ -7,11 +7,15 @@ export function getPowers() {
 }
 
 export function hasPower(power) {
-    return getPowers().includes(power);
+    const normalizedPowers = getPowers().map(item => String(item || "").trim().toLowerCase());
+    return ["master_control", "master_controll"].some(code => normalizedPowers.includes(code))
+        || normalizedPowers.includes(String(power || "").trim().toLowerCase());
 }
 
 export function hasAnyPower(powerList) {
-    return powerList.some(p => getPowers().includes(p));
+    const normalizedPowers = getPowers().map(item => String(item || "").trim().toLowerCase());
+    return ["master_control", "master_controll"].some(code => normalizedPowers.includes(code))
+        || powerList.some(p => normalizedPowers.includes(String(p || "").trim().toLowerCase()));
 }
 
 export function isAdmin() {
@@ -23,7 +27,7 @@ export function isAdmin() {
         "sales staff",
         "billing staff",
         "custom role"
-    ].includes(role);
+    ].includes(role) || hasPower("master_control");
 }
 
 export function logout() {

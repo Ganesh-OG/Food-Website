@@ -10,5 +10,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export const EMAILJS_CONFIG = {
     publicKey: "WnZ3xQu8HN3NpaZwo",
     serviceId: "service_4q1zcxk",
-    templateId: "template_cpcwaje"
+    templateId: "template_cpcwaje",
+    replyTemplateId: "template_ykgvojs"
 };

@@ -7,7 +7,8 @@ import {
     fileNameWithTimestamp,
     uploadToStorage,
     removeFromStorage,
-    getStoragePublicUrl
+    getStoragePublicUrl,
+    initAdminFilePickers
 } from "./common.js";
 
 let products = [];
@@ -150,6 +151,8 @@ async function initProducts() {
     document.getElementById("applyProductFilters").addEventListener("click", renderProducts);
     document.getElementById("resetProductFilters").addEventListener("click", resetFilters);
     document.getElementById("refreshProducts").addEventListener("click", loadProducts);
+    bindRestrictedProductControls();
+    initAdminFilePickers(root);
 
     await loadProducts();
 }
@@ -228,6 +231,7 @@ function renderProducts() {
     });
 
     bindMobileInlineEditor();
+    initAdminFilePickers(table);
 }
 
 function handleEdit(id) {
@@ -260,6 +264,7 @@ function fillEditForm(id) {
     document.getElementById("productCategory").value = product.category || "";
     document.getElementById("productStatus").value = product.Status || "enabled";
     document.getElementById("stockStatus").value = product.Stock_qty_Status || "show";
+    syncRestrictedProductControls();
     document.getElementById("productImage").value = "";
     renderImagePreview();
 
@@ -281,6 +286,7 @@ function resetForm() {
     document.getElementById("productForm").reset();
     document.getElementById("productStatus").value = "enabled";
     document.getElementById("stockStatus").value = "show";
+    syncRestrictedProductControls();
     setNextProductId();
     clearPreviewUrl();
     renderImagePreview();
@@ -332,6 +338,18 @@ async function saveProductRecord({
     let imageName = removeOriginalImage ? null : originalImageName;
 
     try {
+        if (!canControlQtyVisibility && String(stockStatus || "").toLowerCase() !== "show") {
+            showToast("You don't have access to disable stock quantity", "error");
+            syncRestrictedProductControls();
+            return;
+        }
+
+        if (!canControlStockVisibility && String(status || "").toLowerCase() !== "enabled") {
+            showToast("You don't have access to disable products", "error");
+            syncRestrictedProductControls();
+            return;
+        }
+
         if (status === "enabled" && !imageFile && !imageName) {
             showToast("Enabled products must have an image", "error");
             return;
@@ -424,6 +442,44 @@ function toggleFiltersPanel() {
     panel.style.display = panel.style.display === "none" ? "flex" : "none";
 }
 
+function bindRestrictedProductControls() {
+    const productStatus = document.getElementById("productStatus");
+    const stockStatus = document.getElementById("stockStatus");
+
+    if (productStatus && !canControlStockVisibility) {
+        productStatus.disabled = true;
+        productStatus.addEventListener("change", () => {
+            productStatus.value = "enabled";
+            showToast("You don't have access to disable products", "error");
+        });
+    }
+
+    if (stockStatus && !canControlQtyVisibility) {
+        stockStatus.disabled = true;
+        stockStatus.addEventListener("change", () => {
+            stockStatus.value = "show";
+            showToast("You don't have access to disable stock quantity", "error");
+        });
+    }
+
+    syncRestrictedProductControls();
+}
+
+function syncRestrictedProductControls() {
+    const productStatus = document.getElementById("productStatus");
+    const stockStatus = document.getElementById("stockStatus");
+
+    if (productStatus && !canControlStockVisibility) {
+        productStatus.value = "enabled";
+        productStatus.disabled = true;
+    }
+
+    if (stockStatus && !canControlQtyVisibility) {
+        stockStatus.value = "show";
+        stockStatus.disabled = true;
+    }
+}
+
 function resetFilters() {
     const category = document.getElementById("filterCategory");
     const status = document.getElementById("filterStatus");
@@ -484,7 +540,11 @@ function handleImageSelection(event) {
 }
 
 function clearSelectedImage() {
-    document.getElementById("productImage").value = "";
+    const input = document.getElementById("productImage");
+    if (input) {
+        input.value = "";
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    }
     clearPreviewUrl();
 
     if (existingImageName) {

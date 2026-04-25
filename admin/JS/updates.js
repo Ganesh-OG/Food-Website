@@ -6,9 +6,11 @@ import {
     normalizeArrayValue,
     fileNameWithTimestamp,
     uploadToStorage,
+    moveInStorage,
     removeFromStorage,
     getStoragePublicUrl,
-    createStatusTag
+    createStatusTag,
+    initAdminFilePickers
 } from "./common.js";
 
 let appConfig = null;
@@ -143,6 +145,7 @@ async function initUpdates() {
     document.getElementById("serviceStatusForm")?.addEventListener("submit", saveServiceStatus);
     document.getElementById("heroForm")?.addEventListener("submit", addHeroSlide);
     bindUpdatePanelMenu();
+    initAdminFilePickers(root);
 
     await loadUpdateData();
 }
@@ -258,6 +261,8 @@ function renderHeroList() {
             deleteHeroSlide(button.dataset.deleteSlide, button.dataset.file);
         });
     });
+
+    initAdminFilePickers(mount);
 }
 
 function renderAboutList(sectionName, mountId) {
@@ -275,6 +280,8 @@ function renderAboutList(sectionName, mountId) {
                 data-initial-title="${escapeHtml(item.title || "")}"
                 data-initial-content="${escapeHtml(item.content || "")}"
                 data-initial-status="${escapeHtml(String(item.Status || "disabled").toLowerCase())}"
+                data-initial-image-path="${escapeHtml(item.image_path || "")}"
+                data-initial-image-url="${escapeHtml(item.image_path ? getAboutImageUrl(item.section, item.image_path) : "")}"
             >
                 <div><strong>${escapeHtml(item.section)}</strong> ${createStatusTag(item.Status || "disabled")}</div>
                 <input type="text" name="title" value="${escapeHtml(item.title || "")}" placeholder="Title">
@@ -284,9 +291,16 @@ function renderAboutList(sectionName, mountId) {
                     <option value="disabled" ${String(item.Status).toLowerCase() === "disabled" ? "selected" : ""}>disabled</option>
                 </select>
                 <input type="file" name="image" accept="image/*">
-                ${item.image_path ? `<img class="thumb" src="${getAboutImageUrl(item.section, item.image_path)}" alt="${escapeHtml(item.title)}">` : ""}
+                <div class="updates-file-meta">
+                    <strong>Stored file:</strong> ${escapeHtml(item.image_path || "No file uploaded")}
+                </div>
+                <img
+                    class="thumb updates-preview-thumb ${item.image_path ? "" : "is-hidden"}"
+                    src="${item.image_path ? getAboutImageUrl(item.section, item.image_path) : ""}"
+                    alt="${escapeHtml(item.title)}"
+                >
                 <div class="compact-actions">
-                    <button class="btn" type="submit">Save Section</button>
+                    <button class="btn" type="submit" data-save-about="${escapeHtml(item.id)}" hidden>Save Section</button>
                     <button class="btn-ghost" type="button" data-discard-about="${escapeHtml(item.id)}" hidden>Discard</button>
                 </div>
             </form>
@@ -296,11 +310,14 @@ function renderAboutList(sectionName, mountId) {
     mount.querySelectorAll(".about-form").forEach(form => {
         form.addEventListener("submit", saveAboutSection);
         bindAboutFormDirtyState(form);
+        bindAboutImagePreview(form);
     });
 
     mount.querySelectorAll("[data-discard-about]").forEach(button => {
         button.addEventListener("click", () => discardAboutSection(button.dataset.discardAbout));
     });
+
+    initAdminFilePickers(mount);
 }
 
 function renderContactList() {
@@ -314,6 +331,8 @@ function renderContactList() {
                 data-id="${escapeHtml(item.id)}"
                 data-initial-title="${escapeHtml(item.title || "")}"
                 data-initial-status="${escapeHtml(String(item.status || "disabled").toLowerCase())}"
+                data-initial-image-path="${escapeHtml(item.image_path || "")}"
+                data-initial-image-url="${escapeHtml(item.image_path ? getStoragePublicUrl("Food-Website-Storage", `Contact/${item.image_path}`) : "")}"
             >
                 <div><strong>${escapeHtml(item.Stage || item.stage || `Contact ${item.id}`)}</strong> ${createStatusTag(item.status || "disabled")}</div>
                 <input type="text" name="title" value="${escapeHtml(item.title || "")}" placeholder="Title">
@@ -322,9 +341,16 @@ function renderContactList() {
                     <option value="disabled" ${String(item.status).toLowerCase() === "disabled" ? "selected" : ""}>disabled</option>
                 </select>
                 <input type="file" name="image" accept="image/*">
-                ${item.image_path ? `<img class="thumb" src="${getStoragePublicUrl("Food-Website-Storage", `Contact/${item.image_path}`)}" alt="${escapeHtml(item.title || "Contact image")}">` : ""}
+                <div class="updates-file-meta">
+                    <strong>Stored file:</strong> ${escapeHtml(item.image_path || "No file uploaded")}
+                </div>
+                <img
+                    class="thumb updates-preview-thumb contact-preview-thumb ${item.image_path ? "" : "is-hidden"}"
+                    src="${item.image_path ? getStoragePublicUrl("Food-Website-Storage", `Contact/${item.image_path}`) : ""}"
+                    alt="${escapeHtml(item.title || "Contact image")}"
+                >
                 <div class="compact-actions">
-                    <button class="btn" type="submit">Save Contact</button>
+                    <button class="btn" type="submit" data-save-contact="${escapeHtml(item.id)}" hidden>Save Contact</button>
                     <button class="btn-ghost" type="button" data-discard-contact="${escapeHtml(item.id)}" hidden>Discard</button>
                 </div>
             </form>
@@ -334,11 +360,14 @@ function renderContactList() {
     mount.querySelectorAll(".contact-config-form").forEach(form => {
         form.addEventListener("submit", saveContactConfig);
         bindContactFormDirtyState(form);
+        bindContactImagePreview(form);
     });
 
     mount.querySelectorAll("[data-discard-contact]").forEach(button => {
         button.addEventListener("click", () => discardContactConfig(button.dataset.discardContact));
     });
+
+    initAdminFilePickers(mount);
 }
 
 async function saveAppConfig(event) {
@@ -502,14 +531,23 @@ async function saveAboutSection(event) {
     const item = aboutContent.find(row => String(row.id) === String(rowId));
     if (!item) return;
 
+    const sectionLabel = item.section || section || "About";
+    const folder = getAboutSectionGroup(section) === "contact" ? "Contact" : "About";
     let imagePath = item.image_path || null;
     const imageFile = form.elements.image.files[0];
+    let uploadedPath = null;
+    let archivedImagePath = null;
 
     try {
         if (imageFile) {
-            const folder = getAboutSectionGroup(section) === "contact" ? "Contact" : "About";
-            imagePath = fileNameWithTimestamp(imageFile);
-            await uploadToStorage("Food-Website-Storage", `${folder}/${imagePath}`, imageFile);
+            imagePath = normalizeSectionFileName(imageFile, sectionLabel, folder);
+
+            if (item.image_path && sameText(item.image_path, imagePath)) {
+                archivedImagePath = await archiveSectionImage(item.image_path, sectionLabel, folder);
+            }
+
+            uploadedPath = `${folder}/${imagePath}`;
+            await uploadToStorage("Food-Website-Storage", uploadedPath, imageFile);
         }
 
         const payload = {
@@ -526,9 +564,27 @@ async function saveAboutSection(event) {
 
         if (error) throw error;
 
+        if (imageFile && item.image_path && item.image_path !== imagePath && !archivedImagePath) {
+            archivedImagePath = await archiveSectionImage(item.image_path, sectionLabel, folder);
+        }
+
         showToast(`${section} updated`);
         await loadUpdateData();
     } catch (error) {
+        if (uploadedPath) {
+            try {
+                await removeFromStorage("Food-Website-Storage", uploadedPath);
+            } catch (cleanupError) {
+                console.error(cleanupError);
+            }
+        }
+        if (archivedImagePath && item.image_path) {
+            try {
+                await moveInStorage("Food-Website-Storage", `${folder}/${archivedImagePath}`, `${folder}/${item.image_path}`);
+            } catch (restoreError) {
+                console.error(restoreError);
+            }
+        }
         console.error(error);
         showToast(error.message || "Unable to update section", "error");
     }
@@ -542,20 +598,28 @@ async function saveContactConfig(event) {
     const item = contactConfigs.find(row => String(row.id) === String(rowId));
     if (!item) return;
 
+    const stageLabel = item.Stage || item.stage || "Contact";
     let imagePath = item.image_path || null;
     const imageFile = form.elements.image.files[0];
+    let uploadedPath = null;
+    let archivedImagePath = null;
 
     try {
         if (imageFile) {
-            imagePath = fileNameWithTimestamp(imageFile);
-            await uploadToStorage("Food-Website-Storage", `Contact/${imagePath}`, imageFile);
+            imagePath = normalizeContactFileName(imageFile, stageLabel);
+
+            if (item.image_path && sameText(item.image_path, imagePath)) {
+                archivedImagePath = await archiveContactImage(item.image_path, stageLabel);
+            }
+
+            uploadedPath = `Contact/${imagePath}`;
+            await uploadToStorage("Food-Website-Storage", uploadedPath, imageFile);
         }
 
         const payload = {
             title: form.elements.title.value.trim(),
             status: form.elements.status.value,
-            image_path: imagePath,
-            updated_at: new Date().toISOString()
+            image_path: imagePath
         };
 
         const { error } = await supabase
@@ -565,9 +629,27 @@ async function saveContactConfig(event) {
 
         if (error) throw error;
 
+        if (imageFile && item.image_path && item.image_path !== imagePath && !archivedImagePath) {
+            archivedImagePath = await archiveContactImage(item.image_path, stageLabel);
+        }
+
         showToast(`${item.Stage || item.stage || "Contact"} updated`);
         await loadUpdateData();
     } catch (error) {
+        if (uploadedPath) {
+            try {
+                await removeFromStorage("Food-Website-Storage", uploadedPath);
+            } catch (cleanupError) {
+                console.error(cleanupError);
+            }
+        }
+        if (archivedImagePath && item.image_path) {
+            try {
+                await moveInStorage("Food-Website-Storage", `Contact/${archivedImagePath}`, `Contact/${item.image_path}`);
+            } catch (restoreError) {
+                console.error(restoreError);
+            }
+        }
         console.error(error);
         showToast(error.message || "Unable to update contact config", "error");
     }
@@ -582,6 +664,8 @@ function discardAboutSection(id) {
     form.elements.content.value = item.content || "";
     form.elements.status.value = String(item.Status || "disabled").toLowerCase();
     form.elements.image.value = "";
+    form.elements.image.dispatchEvent(new Event("change", { bubbles: true }));
+    resetAboutImagePreview(form);
     syncAboutFormDirtyState(form);
 }
 
@@ -593,6 +677,8 @@ function discardContactConfig(id) {
     form.elements.title.value = item.title || "";
     form.elements.status.value = String(item.status || "disabled").toLowerCase();
     form.elements.image.value = "";
+    form.elements.image.dispatchEvent(new Event("change", { bubbles: true }));
+    resetContactImagePreview(form);
     syncContactFormDirtyState(form);
 }
 
@@ -611,7 +697,11 @@ function syncAboutFormDirtyState(form) {
         form.elements.status.value !== (form.dataset.initialStatus || "disabled") ||
         Boolean(form.elements.image.files[0]);
 
+    const saveButton = form.querySelector("[data-save-about]");
     const discardButton = form.querySelector("[data-discard-about]");
+    if (saveButton) {
+        saveButton.hidden = !isDirty;
+    }
     if (discardButton) {
         discardButton.hidden = !isDirty;
     }
@@ -631,10 +721,156 @@ function syncContactFormDirtyState(form) {
         form.elements.status.value !== (form.dataset.initialStatus || "disabled") ||
         Boolean(form.elements.image.files[0]);
 
+    const saveButton = form.querySelector("[data-save-contact]");
     const discardButton = form.querySelector("[data-discard-contact]");
+    if (saveButton) {
+        saveButton.hidden = !isDirty;
+    }
     if (discardButton) {
         discardButton.hidden = !isDirty;
     }
+}
+
+function bindAboutImagePreview(form) {
+    form.elements.image?.addEventListener("change", () => updateAboutImagePreview(form));
+    resetAboutImagePreview(form);
+}
+
+function updateAboutImagePreview(form) {
+    const preview = form.querySelector(".updates-preview-thumb");
+    if (!preview) return;
+
+    const imageFile = form.elements.image?.files?.[0];
+    if (!imageFile) {
+        resetAboutImagePreview(form);
+        return;
+    }
+
+    if (form.dataset.previewObjectUrl) {
+        URL.revokeObjectURL(form.dataset.previewObjectUrl);
+        delete form.dataset.previewObjectUrl;
+    }
+
+    const objectUrl = URL.createObjectURL(imageFile);
+    form.dataset.previewObjectUrl = objectUrl;
+    preview.src = objectUrl;
+    preview.classList.remove("is-hidden");
+}
+
+function resetAboutImagePreview(form) {
+    const preview = form.querySelector(".updates-preview-thumb");
+    if (!preview) return;
+
+    if (form.dataset.previewObjectUrl) {
+        URL.revokeObjectURL(form.dataset.previewObjectUrl);
+        delete form.dataset.previewObjectUrl;
+    }
+
+    const initialUrl = form.dataset.initialImageUrl || "";
+    preview.src = initialUrl;
+    preview.classList.toggle("is-hidden", !initialUrl);
+}
+
+function bindContactImagePreview(form) {
+    form.elements.image?.addEventListener("change", () => updateContactImagePreview(form));
+    resetContactImagePreview(form);
+}
+
+function updateContactImagePreview(form) {
+    const preview = form.querySelector(".contact-preview-thumb");
+    if (!preview) return;
+
+    const imageFile = form.elements.image?.files?.[0];
+    if (!imageFile) {
+        resetContactImagePreview(form);
+        return;
+    }
+
+    if (form.dataset.previewObjectUrl) {
+        URL.revokeObjectURL(form.dataset.previewObjectUrl);
+        delete form.dataset.previewObjectUrl;
+    }
+
+    const objectUrl = URL.createObjectURL(imageFile);
+    form.dataset.previewObjectUrl = objectUrl;
+    preview.src = objectUrl;
+    preview.classList.remove("is-hidden");
+}
+
+function resetContactImagePreview(form) {
+    const preview = form.querySelector(".contact-preview-thumb");
+    if (!preview) return;
+
+    if (form.dataset.previewObjectUrl) {
+        URL.revokeObjectURL(form.dataset.previewObjectUrl);
+        delete form.dataset.previewObjectUrl;
+    }
+
+    const initialUrl = form.dataset.initialImageUrl || "";
+    preview.src = initialUrl;
+    preview.classList.toggle("is-hidden", !initialUrl);
+}
+
+async function archiveContactImage(fileName, stageLabel = "Contact") {
+    return archiveSectionImage(fileName, stageLabel, "Contact");
+}
+
+async function archiveSectionImage(fileName, sectionLabel = "Section", folder = "About") {
+    const originalName = String(fileName || "").trim();
+    if (!originalName) return;
+
+    const extensionMatch = originalName.match(/\.([^.]+)$/);
+    const extension = extensionMatch ? `.${extensionMatch[1]}` : "";
+    const stageSlug = String(sectionLabel || "Section")
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "");
+    const normalizedStage = stageSlug
+        ? `${stageSlug.charAt(0).toUpperCase()}${stageSlug.slice(1)}`
+        : "Section";
+
+    for (let index = 1; index <= 50; index += 1) {
+        const archivedName = `Old_${normalizedStage}_${index}${extension}`;
+        try {
+            await moveInStorage("Food-Website-Storage", `${folder}/${originalName}`, `${folder}/${archivedName}`);
+            return archivedName;
+        } catch (error) {
+            const message = String(error?.message || "").toLowerCase();
+            if (message.includes("already exists") || message.includes("duplicate")) {
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    throw new Error("Unable to archive previous contact image");
+}
+
+function normalizeContactFileName(file, stageLabel = "Contact") {
+    return normalizeSectionFileName(file, stageLabel, "Contact");
+}
+
+function normalizeSectionFileName(file, sectionLabel = "Section", folder = "About") {
+    const rawName = String(file?.name || "contact-image");
+    const parts = rawName.split(".");
+    const extension = parts.length > 1 ? parts.pop().toLowerCase() : "";
+    const stageSlug = String(sectionLabel || "Section")
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "");
+    const normalizedStage = stageSlug
+        ? `${stageSlug.charAt(0).toUpperCase()}${stageSlug.slice(1)}`
+        : "Section";
+    const basePrefix = folder === "Contact" ? "Contact" : "About";
+    const normalizedBase = `${basePrefix}_${normalizedStage}`;
+
+    return extension ? `${normalizedBase}.${extension}` : normalizedBase;
+}
+
+function sameText(first, second) {
+    return String(first || "").trim().toLowerCase() === String(second || "").trim().toLowerCase();
 }
 
 function getAboutImageUrl(section, fileName) {

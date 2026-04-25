@@ -3,6 +3,8 @@ import { supabase } from "./config.js";
 const USER_STORAGE_KEY = "user";
 const POWER_STORAGE_KEY = "powers";
 const PAYMENT_STORAGE_KEY = "paymentSelected";
+export const MASTER_CONTROL_POWER = "master_control";
+export const MASTER_CONTROL_ALIASES = [MASTER_CONTROL_POWER, "master_controll"];
 
 export const ADMIN_ROLE_NAMES = [
     "admin",
@@ -41,15 +43,30 @@ export function getStoredPowers() {
 }
 
 export function hasStoredPower(code, powers = getStoredPowers()) {
-    return powers.includes(code);
+    const normalizedPowers = powers.map(item => String(item || "").trim().toLowerCase());
+    if (hasMasterControlPower(normalizedPowers)) {
+        return true;
+    }
+    const target = String(code || "").trim().toLowerCase();
+    return normalizedPowers.includes(target);
 }
 
 export function hasAnyStoredPower(codes = [], powers = getStoredPowers()) {
-    return codes.some(code => powers.includes(code));
+    const normalizedPowers = powers.map(item => String(item || "").trim().toLowerCase());
+    if (hasMasterControlPower(normalizedPowers)) {
+        return true;
+    }
+    return codes.some(code => normalizedPowers.includes(String(code || "").trim().toLowerCase()));
 }
 
 export function canAccessAdmin(user = getStoredUser(), powers = getStoredPowers()) {
-    return Boolean(user) && isAdminUser(user);
+    const resolvedPowers = Array.isArray(powers) ? powers.filter(Boolean) : [];
+    return Boolean(user) && (isAdminUser(user) || resolvedPowers.length > 0);
+}
+
+export function hasMasterControlPower(powers = getStoredPowers()) {
+    const normalizedPowers = powers.map(item => String(item || "").trim().toLowerCase());
+    return MASTER_CONTROL_ALIASES.some(code => normalizedPowers.includes(code));
 }
 
 export function clearStoredSession({ keepCart = true } = {}) {
@@ -64,7 +81,18 @@ export function clearStoredSession({ keepCart = true } = {}) {
 
 export function setStoredSession(user, powers = []) {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user || null));
-    localStorage.setItem(POWER_STORAGE_KEY, JSON.stringify(Array.from(new Set(powers || []))));
+    localStorage.setItem(
+        POWER_STORAGE_KEY,
+        JSON.stringify(
+            Array.from(
+                new Set(
+                    (powers || [])
+                        .map(item => String(item || "").trim().toLowerCase())
+                        .filter(Boolean)
+                )
+            )
+        )
+    );
 }
 
 export function normalizeKeyArray(value) {
@@ -134,7 +162,7 @@ async function fetchPowerCodes(powerKeys = []) {
     }
 
     return (data || [])
-        .map(item => String(item.code || "").trim())
+        .map(item => String(item.code || "").trim().toLowerCase())
         .filter(Boolean);
 }
 
