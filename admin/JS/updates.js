@@ -17,16 +17,36 @@ let aboutContent = [];
 let contactConfigs = [];
 let heroSlides = [];
 let editingHeroSlideId = null;
+let canManageFooter = false;
+let canControlSite = false;
+let canManageSlider = false;
+let canEditAbout = false;
 
 document.addEventListener("DOMContentLoaded", initUpdates);
 
 async function initUpdates() {
-    const root = renderAdminShell({
+    const view = await renderAdminShell({
         title: "Website Updates",
-        subtitle: "Choose a function to open its control panel. Only one update section stays open at a time for a cleaner workflow."
+        subtitle: "Each update panel opens only for roles with the matching management powers.",
+        requiredAnyPower: ["site_control", "about_edit", "slider_manage", "footer_manage"]
     });
 
-    if (!root) return;
+    if (!view?.root) return;
+
+    const { root, hasPower } = view;
+    canManageFooter = hasPower("footer_manage");
+    canControlSite = hasPower("site_control");
+    canManageSlider = hasPower("slider_manage");
+    canEditAbout = hasPower("about_edit");
+    const activePanelId = canManageFooter
+        ? "appConfigPanel"
+        : canControlSite
+            ? "serviceStatusPanel"
+            : canManageSlider
+                ? "heroPanel"
+                : canEditAbout
+                    ? "aboutPanel"
+                    : "contactPanel";
 
     root.innerHTML = `
         <div class="updates-workspace">
@@ -37,26 +57,26 @@ async function initUpdates() {
                     <p class="muted">Click a function name to open that control container.</p>
                 </div>
                 <div class="updates-menu-list">
-                    <button class="updates-menu-item active" type="button" data-update-target="appConfigPanel">
+                    <button class="updates-menu-item ${activePanelId === "appConfigPanel" ? "active" : ""}" type="button" data-update-target="appConfigPanel" ${canManageFooter ? "" : "hidden"}>
                         <span>Footer / App Config</span>
                     </button>
-                    <button class="updates-menu-item" type="button" data-update-target="serviceStatusPanel">
+                    <button class="updates-menu-item ${activePanelId === "serviceStatusPanel" ? "active" : ""}" type="button" data-update-target="serviceStatusPanel" ${canControlSite ? "" : "hidden"}>
                         <span>Service Status</span>
                     </button>
-                    <button class="updates-menu-item" type="button" data-update-target="heroPanel">
+                    <button class="updates-menu-item ${activePanelId === "heroPanel" ? "active" : ""}" type="button" data-update-target="heroPanel" ${canManageSlider ? "" : "hidden"}>
                         <span>Home Slider</span>
                     </button>
-                    <button class="updates-menu-item" type="button" data-update-target="aboutPanel">
+                    <button class="updates-menu-item ${activePanelId === "aboutPanel" ? "active" : ""}" type="button" data-update-target="aboutPanel" ${canEditAbout ? "" : "hidden"}>
                         <span>About Content</span>
                     </button>
-                    <button class="updates-menu-item" type="button" data-update-target="contactPanel">
+                    <button class="updates-menu-item ${activePanelId === "contactPanel" ? "active" : ""}" type="button" data-update-target="contactPanel" ${canManageFooter ? "" : "hidden"}>
                         <span>Contact Content</span>
                     </button>
                 </div>
             </aside>
 
             <section class="updates-content">
-                <div class="card updates-panel active" id="appConfigPanel">
+                <div class="card updates-panel ${activePanelId === "appConfigPanel" ? "active" : ""}" id="appConfigPanel" ${canManageFooter && activePanelId === "appConfigPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Footer / App Config</h3>
                         <p class="muted">Manage contact details and footer information visible across the website.</p>
@@ -71,7 +91,7 @@ async function initUpdates() {
                     </form>
                 </div>
 
-                <div class="card updates-panel" id="serviceStatusPanel" hidden>
+                <div class="card updates-panel ${activePanelId === "serviceStatusPanel" ? "active" : ""}" id="serviceStatusPanel" ${canControlSite && activePanelId === "serviceStatusPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Service Status</h3>
                         <p class="muted">Control whether ordering is shown as available or temporarily stopped.</p>
@@ -86,7 +106,7 @@ async function initUpdates() {
                     </form>
                 </div>
 
-                <div class="card updates-panel" id="heroPanel" hidden>
+                <div class="card updates-panel ${activePanelId === "heroPanel" ? "active" : ""}" id="heroPanel" ${canManageSlider && activePanelId === "heroPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Home Slider</h3>
                         <p class="muted">Add new hero slides, then edit or delete each existing slide from the list below.</p>
@@ -100,7 +120,7 @@ async function initUpdates() {
                     <div class="list" id="heroList"></div>
                 </div>
 
-                <div class="card updates-panel" id="aboutPanel" hidden>
+                <div class="card updates-panel ${activePanelId === "aboutPanel" ? "active" : ""}" id="aboutPanel" ${canEditAbout && activePanelId === "aboutPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>About Content</h3>
                         <p class="muted">Edit the About section separately with its own title, content, status, and image.</p>
@@ -108,7 +128,7 @@ async function initUpdates() {
                     <div class="list" id="aboutList"></div>
                 </div>
 
-                <div class="card updates-panel" id="contactPanel" hidden>
+                <div class="card updates-panel ${activePanelId === "contactPanel" ? "active" : ""}" id="contactPanel" ${canManageFooter && activePanelId === "contactPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Contact Content</h3>
                         <p class="muted">Manage the Contact section independently from About.</p>
@@ -119,9 +139,9 @@ async function initUpdates() {
         </div>
     `;
 
-    document.getElementById("appConfigForm").addEventListener("submit", saveAppConfig);
-    document.getElementById("serviceStatusForm").addEventListener("submit", saveServiceStatus);
-    document.getElementById("heroForm").addEventListener("submit", addHeroSlide);
+    document.getElementById("appConfigForm")?.addEventListener("submit", saveAppConfig);
+    document.getElementById("serviceStatusForm")?.addEventListener("submit", saveServiceStatus);
+    document.getElementById("heroForm")?.addEventListener("submit", addHeroSlide);
     bindUpdatePanelMenu();
 
     await loadUpdateData();

@@ -1,5 +1,6 @@
 import { EMAILJS_CONFIG, supabase } from "./config.js";
 import { mergeGuestCartIntoUserCart } from "./cart_store.js";
+import { initializeUserSession, setStoredSession } from "./session.js";
 
 export function getPostAuthRedirect(redirectTarget, fallback = "index.html") {
     return redirectTarget || fallback;
@@ -40,20 +41,7 @@ export async function authenticateUser({ input, password }) {
             return { ok: false, message: "Invalid login" };
         }
 
-        const { data: roleData } = await supabase
-            .from("roles")
-            .select("role_powers")
-            .eq("role_name", user.role)
-            .single();
-
-        const rolePowers = roleData?.role_powers || [];
-        const userPowers = user.additional_powers || [];
-        const finalPowers = user.role === "Custom Role"
-            ? userPowers
-            : [...new Set([...rolePowers, ...userPowers])];
-
-        localStorage.setItem("user", JSON.stringify(user));
-        localStorage.setItem("powers", JSON.stringify(finalPowers));
+        const { powers: finalPowers } = await initializeUserSession(user);
 
         await mergeGuestCartIntoUserCart(supabase, user);
 
@@ -141,8 +129,7 @@ export async function registerExternalUser({
             return { ok: false, message: updateError.message || "Unable to create account right now" };
         }
 
-        localStorage.setItem("user", JSON.stringify(savedUser));
-        localStorage.setItem("powers", JSON.stringify([]));
+        setStoredSession(savedUser, []);
 
         await mergeGuestCartIntoUserCart(supabase, savedUser);
 

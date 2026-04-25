@@ -1,4 +1,5 @@
 import { authenticateUser, getPostAuthRedirect } from "./auth_logic.js";
+import { canAccessAdmin } from "./session.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("loginForm");
@@ -39,20 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
             showPopup("Login Successful", "success");
 
             setTimeout(() => {
-                const role = user.role?.toLowerCase();
-                const type = user.user_type?.toLowerCase();
-
-                const adminRoles = [
-                    "admin",
-                    "manager",
-                    "sales staff",
-                    "billing staff",
-                    "custom role"
-                ];
-
-                if (type === "external" || role === "student") {
-                    window.location.href = getPostAuthRedirect(redirectTarget);
-                } else if (adminRoles.includes(role)) {
+                if (canAccessAdmin(user, result.powers)) {
                     window.location.href = "admin/select-mode.html";
                 } else {
                     window.location.href = getPostAuthRedirect(redirectTarget);

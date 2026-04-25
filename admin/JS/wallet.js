@@ -5,12 +5,15 @@ let users = [];
 document.addEventListener("DOMContentLoaded", initWallet);
 
 async function initWallet() {
-    const root = renderAdminShell({
+    const view = await renderAdminShell({
         title: "Wallet",
-        subtitle: "Legacy wallet operations now work directly on the Supabase users table."
+        subtitle: "Wallet access is limited to roles with the wallet permission.",
+        requiredPower: "wallet_access"
     });
 
-    if (!root) return;
+    if (!view?.root) return;
+
+    const { root } = view;
 
     root.innerHTML = `
         <div class="split">

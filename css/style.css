@@ -225,6 +225,11 @@ section{
    animation: fadeIn .2s linear;
 }
 
+.header .flex .profile.profile-menu{
+   width: 34rem;
+   text-align: left;
+}
+
 .header .flex .profile.active{
    display: inline-block;
 }
@@ -239,6 +244,33 @@ section{
    font-size: 2rem;
    color:var(--black);
    margin-bottom: .5rem;
+}
+
+.header .flex .profile p{
+   font-size: 1.4rem;
+   line-height: 1.6;
+   color: var(--light-color);
+   margin-bottom: .6rem;
+}
+
+.header .flex .profile p strong{
+   color: var(--black);
+}
+
+.header .flex .profile .profile-copy{
+   margin-bottom: 1.2rem;
+}
+
+.header .flex .profile .profile-actions{
+   display: flex;
+   gap: 1rem;
+   flex-wrap: wrap;
+   justify-content: flex-start;
+}
+
+.header .flex .profile .profile-switch-btn{
+   background-color: var(--black);
+   color: var(--white);
 }
 
 .header .flex .profile .account{

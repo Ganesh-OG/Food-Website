@@ -16,7 +16,11 @@
    <script>
       const existingUser = JSON.parse(localStorage.getItem("user"));
       if (existingUser) {
-         const redirectTarget = new URLSearchParams(window.location.search).get("redirect") || "index.html";
+         const role = String(existingUser.role || "").trim().toLowerCase();
+         const isAdminUser = ["admin", "manager", "sales staff", "billing staff", "custom role"].includes(role);
+         const redirectTarget = isAdminUser
+            ? "admin/select-mode.html"
+            : (new URLSearchParams(window.location.search).get("redirect") || "index.html");
          window.location.replace(redirectTarget);
       }
    </script>

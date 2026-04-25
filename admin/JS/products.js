@@ -17,20 +17,31 @@ let existingImageName = null;
 let removeExistingImage = false;
 let previewUrl = null;
 let mobilePreviewUrl = null;
+let canAddProducts = false;
+let canEditProducts = false;
+let canControlStockVisibility = false;
+let canControlQtyVisibility = false;
 
 document.addEventListener("DOMContentLoaded", initProducts);
 
 async function initProducts() {
-    const root = renderAdminShell({
+    const view = await renderAdminShell({
         title: "Products",
-        subtitle: "Add, update, and remove products using Supabase instead of PHP + Firebase."
+        subtitle: "Product access is filtered by product view, add, edit, and stock-related powers.",
+        requiredAnyPower: ["product_view", "product_add", "product_edit", "product_disable_stock", "product_disable_qty"]
     });
 
-    if (!root) return;
+    if (!view?.root) return;
+
+    const { root, hasPower } = view;
+    canAddProducts = hasPower("product_add");
+    canEditProducts = hasPower("product_edit");
+    canControlStockVisibility = hasPower("product_disable_stock");
+    canControlQtyVisibility = hasPower("product_disable_qty");
 
     root.innerHTML = `
         <div class="split products-split">
-            <div class="card products-left-card">
+            <div class="card products-left-card" ${canAddProducts || canEditProducts ? "" : "hidden"}>
                 <h3 id="productFormTitle">Add Product</h3>
                 <form id="productForm" class="form-grid">
                     <label>
@@ -49,14 +60,14 @@ async function initProducts() {
                         <span>Category</span>
                         <input type="text" id="productCategory" placeholder="Enter category" required>
                     </label>
-                    <label>
+                    <label ${canControlStockVisibility ? "" : "hidden"}>
                         <span>Status</span>
                         <select id="productStatus">
                             <option value="enabled">enabled</option>
                             <option value="disabled">disabled</option>
                         </select>
                     </label>
-                    <label>
+                    <label ${canControlQtyVisibility ? "" : "hidden"}>
                         <span>Stock Quantity Display</span>
                         <select id="stockStatus">
                             <option value="show">show stock qty</option>
@@ -130,10 +141,10 @@ async function initProducts() {
         </div>
     `;
 
-    document.getElementById("productForm").addEventListener("submit", submitProduct);
-    document.getElementById("resetProductForm").addEventListener("click", resetForm);
-    document.getElementById("productImage").addEventListener("change", handleImageSelection);
-    document.getElementById("removeProductImage").addEventListener("click", clearSelectedImage);
+    document.getElementById("productForm")?.addEventListener("submit", submitProduct);
+    document.getElementById("resetProductForm")?.addEventListener("click", resetForm);
+    document.getElementById("productImage")?.addEventListener("change", handleImageSelection);
+    document.getElementById("removeProductImage")?.addEventListener("click", clearSelectedImage);
     document.getElementById("productSearch").addEventListener("input", renderProducts);
     document.getElementById("toggleProductFilters").addEventListener("click", toggleFiltersPanel);
     document.getElementById("applyProductFilters").addEventListener("click", renderProducts);
@@ -205,8 +216,7 @@ function renderProducts() {
                 <td>${escapeHtml(product.stock)}</td>
                 <td>
                     <div class="compact-actions">
-                        <button class="btn-secondary" data-edit="${escapeHtml(product.id)}">Edit</button>
-                        <button class="btn-danger" data-delete="${escapeHtml(product.id)}">Delete</button>
+                        ${canEditProducts ? `<button class="btn-secondary" data-edit="${escapeHtml(product.id)}">Edit</button>` : `<span class="muted">View only</span>`}
                     </div>
                 </td>
             </tr>
@@ -217,14 +227,12 @@ function renderProducts() {
         button.addEventListener("click", () => handleEdit(button.dataset.edit));
     });
 
-    table.querySelectorAll("[data-delete]").forEach(button => {
-        button.addEventListener("click", () => deleteProduct(button.dataset.delete));
-    });
-
     bindMobileInlineEditor();
 }
 
 function handleEdit(id) {
+    if (!canEditProducts) return;
+
     if (isMobileView()) {
         mobileEditingId = mobileEditingId === id ? null : id;
         clearMobilePreviewUrl();
@@ -311,6 +319,16 @@ async function saveProductRecord({
     removeOriginalImage = false,
     editId = null
 }) {
+    if (!editId && !canAddProducts) {
+        showToast("You do not have permission to add products", "error");
+        return;
+    }
+
+    if (editId && !canEditProducts) {
+        showToast("You do not have permission to edit products", "error");
+        return;
+    }
+
     let imageName = removeOriginalImage ? null : originalImageName;
 
     try {
@@ -330,8 +348,8 @@ async function saveProductRecord({
             price,
             stock,
             category,
-            Status: status,
-            Stock_qty_Status: stockStatus,
+            Status: canControlStockVisibility ? status : "enabled",
+            Stock_qty_Status: canControlQtyVisibility ? stockStatus : "show",
             image: imageName
         };
 
@@ -360,28 +378,7 @@ async function saveProductRecord({
 }
 
 async function deleteProduct(id) {
-    const product = products.find(item => String(item.id) === String(id));
-    if (!product) return;
-
-    try {
-        const { error } = await supabase
-            .from("products")
-            .delete()
-            .eq("id", id);
-
-        if (error) throw error;
-
-        if (product.image) {
-            await removeFromStorage("Food-Website-Storage", `Products/${product.image}`);
-        }
-
-        showToast("Product deleted");
-        if (editingId === id) resetForm();
-        await loadProducts();
-    } catch (error) {
-        console.error(error);
-        showToast(error.message || "Unable to delete product", "error");
-    }
+    showToast("Delete is not assigned to the current RBAC power set", "error");
 }
 
 function setNextProductId() {
@@ -538,6 +535,24 @@ function isMobileView() {
 }
 
 function getMobileInlineDesktopEditor(product) {
+    if (!canEditProducts) {
+        return `
+            <tr data-row-id="${escapeHtml(product.id)}">
+                <td>
+                    ${product.image ? `<img class="thumb" src="${getStoragePublicUrl("Food-Website-Storage", `Products/${product.image}`)}" alt="${escapeHtml(product.name)}">` : ""}
+                </td>
+                <td>
+                    <strong>${escapeHtml(product.name)}</strong>
+                    <div class="muted code">${escapeHtml(product.id)}</div>
+                </td>
+                <td>${escapeHtml(product.category)}</td>
+                <td>${formatCurrency(product.price)}</td>
+                <td>${escapeHtml(product.stock)}</td>
+                <td><span class="muted">View only</span></td>
+            </tr>
+        `;
+    }
+
     return `
         <tr class="mobile-edit-shell">
             <td colspan="6">
@@ -560,14 +575,14 @@ function getMobileInlineDesktopEditor(product) {
                             <span>Category</span>
                             <input type="text" name="category" value="${escapeHtml(product.category || "")}" required>
                         </label>
-                        <label>
+                        <label ${canControlStockVisibility ? "" : "hidden"}>
                             <span>Status</span>
                             <select name="status">
                                 <option value="enabled" ${String(product.Status).toLowerCase() === "enabled" ? "selected" : ""}>enabled</option>
                                 <option value="disabled" ${String(product.Status).toLowerCase() === "disabled" ? "selected" : ""}>disabled</option>
                             </select>
                         </label>
-                        <label>
+                        <label ${canControlQtyVisibility ? "" : "hidden"}>
                             <span>Stock Quantity Display</span>
                             <select name="stockStatus">
                                 <option value="show" ${String(product.Stock_qty_Status).toLowerCase() === "show" ? "selected" : ""}>show stock qty</option>

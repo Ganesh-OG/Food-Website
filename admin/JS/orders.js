@@ -1,16 +1,23 @@
 import { renderAdminShell, supabase, showToast, formatCurrency, createStatusTag, escapeHtml } from "./common.js";
 
 let orders = [];
+let canCompleteOrders = false;
+let canCancelOrders = false;
 
 document.addEventListener("DOMContentLoaded", initOrders);
 
 async function initOrders() {
-    const root = renderAdminShell({
+    const view = await renderAdminShell({
         title: "Orders",
-        subtitle: "Converted from the legacy PHP orders screen and now managed directly from Supabase."
+        subtitle: "Order visibility is tied to sales access, while cancellation also respects wallet access.",
+        requiredAnyPower: ["sales_dashboard", "wallet_access"]
     });
 
-    if (!root) return;
+    if (!view?.root) return;
+
+    const { root, hasPower } = view;
+    canCompleteOrders = hasPower("sales_dashboard");
+    canCancelOrders = hasPower("wallet_access");
 
     root.innerHTML = `
         <div class="card">
@@ -102,8 +109,8 @@ function renderOrders() {
                 <td>${createStatusTag(order.status)}</td>
                 <td>
                     <div class="compact-actions">
-                        <button class="btn-secondary" data-action="complete" data-id="${escapeHtml(order.order_id)}" ${pending ? "" : "disabled"}>Complete</button>
-                        <button class="btn-danger" data-action="cancel" data-id="${escapeHtml(order.order_id)}" ${pending ? "" : "disabled"}>Cancel</button>
+                        ${canCompleteOrders ? `<button class="btn-secondary" data-action="complete" data-id="${escapeHtml(order.order_id)}" ${pending ? "" : "disabled"}>Complete</button>` : ""}
+                        ${canCancelOrders ? `<button class="btn-danger" data-action="cancel" data-id="${escapeHtml(order.order_id)}" ${pending ? "" : "disabled"}>Cancel</button>` : ""}
                     </div>
                 </td>
             </tr>
@@ -118,6 +125,16 @@ function renderOrders() {
 async function handleOrderAction(orderId, action) {
     const order = orders.find(item => String(item.order_id) === String(orderId));
     if (!order) return;
+
+    if (action === "complete" && !canCompleteOrders) {
+        showToast("You do not have permission to complete orders", "error");
+        return;
+    }
+
+    if (action === "cancel" && !canCancelOrders) {
+        showToast("You do not have permission to cancel orders", "error");
+        return;
+    }
 
     try {
         if (action === "complete") {

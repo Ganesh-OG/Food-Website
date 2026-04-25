@@ -1,131 +1,164 @@
-// components/JS/user_header.js
-
 import { supabase } from "./config.js";
-import { getCurrentUser, getCartCount, loadStoredCart } from "./cart_store.js";
+import { getCartCount, loadStoredCart } from "./cart_store.js";
+import { canAccessAdmin, clearStoredSession, getStoredPowers, getStoredUser } from "./session.js";
 
 let headerPoller = null;
 
 startHeaderInit();
 
 function startHeaderInit() {
-  const init = () => {
-    if (headerPoller) {
-      clearInterval(headerPoller);
-      headerPoller = null;
+    const init = () => {
+        if (headerPoller) {
+            clearInterval(headerPoller);
+            headerPoller = null;
+        }
+
+        headerPoller = setInterval(() => {
+            const cartCount = document.getElementById("cartCount");
+            const profile = document.getElementById("profileBox");
+
+            if (!cartCount || !profile) return;
+
+            clearInterval(headerPoller);
+            headerPoller = null;
+            initializeUserInfo();
+        }, 100);
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init, { once: true });
+    } else {
+        init();
     }
 
-    headerPoller = setInterval(() => {
-      const userName = document.getElementById("userName");
-      const cartCount = document.getElementById("cartCount");
-
-      if (!userName || !cartCount) return;
-
-      clearInterval(headerPoller);
-      headerPoller = null;
-      initializeUserInfo();
-    }, 100);
-  };
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
-
-  document.addEventListener("headerLoaded", init);
+    document.addEventListener("headerLoaded", init);
 }
 
 async function syncHeaderCartCount() {
-  const cartCountEl = document.getElementById("cartCount");
-  if (!cartCountEl) return;
+    const cartCountEl = document.getElementById("cartCount");
+    if (!cartCountEl) return;
 
-  try {
-    const cartItems = await loadStoredCart(supabase);
-    cartCountEl.textContent = `(${getCartCount(cartItems)})`;
-  } catch (err) {
-    console.error("❌ Header cart sync error:", err);
-    cartCountEl.textContent = "(0)";
-  }
+    try {
+        const cartItems = await loadStoredCart(supabase);
+        cartCountEl.textContent = `(${getCartCount(cartItems)})`;
+    } catch (error) {
+        console.error("Header cart sync error:", error);
+        cartCountEl.textContent = "(0)";
+    }
+}
+
+function getModeActions(user, powers) {
+    if (!user) {
+        return "";
+    }
+
+    const actions = [
+        `<a href="profile.html" class="btn">profile</a>`
+    ];
+
+    if (canAccessAdmin(user, powers)) {
+        actions.push(`<a href="admin/select-mode.html" class="btn profile-switch-btn">switch mode</a>`);
+    }
+
+    actions.push(`<a href="#" id="logoutBtn" class="delete-btn">logout</a>`);
+    return actions.join("");
+}
+
+function renderGuestProfile(profile) {
+    profile.innerHTML = `
+        <p class="name">Guest User</p>
+        <p class="profile-copy">Browse the menu, add items to cart, and sign in when you're ready.</p>
+        <div class="flex profile-actions">
+            <a href="signin.html" class="btn">sign in</a>
+            <a href="register.html" class="delete-btn">register</a>
+        </div>
+    `;
+}
+
+function renderUserProfile(profile, user, powers) {
+    const roleLabel = user.role || (user.user_type === "external" ? "Customer" : "User");
+    const departmentLabel = user.user_type === "external"
+        ? "External User"
+        : (user.department || "Not assigned");
+    const accessLabel = canAccessAdmin(user, powers)
+        ? "User + Admin"
+        : "User Only";
+
+    profile.innerHTML = `
+        <p class="name">${escapeHtml(user.name || "User")}</p>
+        <p><strong>Email:</strong> ${escapeHtml(user.email || "N/A")}</p>
+        <p><strong>ID:</strong> ${escapeHtml(user.id || "N/A")}</p>
+        <p><strong>Role:</strong> ${escapeHtml(roleLabel)}</p>
+        <p><strong>Department:</strong> ${escapeHtml(departmentLabel)}</p>
+        <p><strong>Access:</strong> ${escapeHtml(accessLabel)}</p>
+        <div class="flex profile-actions">
+            ${getModeActions(user, powers)}
+        </div>
+    `;
 }
 
 async function initializeUserInfo() {
-  try {
-    const user = getCurrentUser();
-    const userBtn = document.getElementById("user-btn");
-    const profile = document.getElementById("profileBox");
-    const menuBtn = document.getElementById("menu-btn");
-    const navbar = document.querySelector(".navbar");
+    try {
+        const user = getStoredUser();
+        const powers = getStoredPowers();
+        const userBtn = document.getElementById("user-btn");
+        const profile = document.getElementById("profileBox");
+        const menuBtn = document.getElementById("menu-btn");
+        const navbar = document.querySelector(".navbar");
 
-    if (userBtn && profile && !userBtn.dataset.bound) {
-      userBtn.dataset.bound = "true";
-      userBtn.addEventListener("click", () => {
-        profile.classList.toggle("active");
-      });
+        if (userBtn && profile && !userBtn.dataset.bound) {
+            userBtn.dataset.bound = "true";
+            userBtn.addEventListener("click", () => {
+                profile.classList.toggle("active");
+            });
+        }
+
+        if (menuBtn && navbar && !menuBtn.dataset.bound) {
+            menuBtn.dataset.bound = "true";
+            menuBtn.addEventListener("click", () => {
+                navbar.classList.toggle("active");
+            });
+        }
+
+        await syncHeaderCartCount();
+
+        if (!profile) return;
+
+        if (!user) {
+            renderGuestProfile(profile);
+            return;
+        }
+
+        renderUserProfile(profile, user, powers);
+
+        const logoutBtn = document.getElementById("logoutBtn");
+        if (logoutBtn && !logoutBtn.dataset.bound) {
+            logoutBtn.dataset.bound = "true";
+            logoutBtn.addEventListener("click", event => {
+                event.preventDefault();
+                clearStoredSession();
+                window.location.href = "index.html";
+            });
+        }
+    } catch (error) {
+        console.error("Header initialization error:", error);
     }
+}
 
-    if (menuBtn && navbar && !menuBtn.dataset.bound) {
-      menuBtn.dataset.bound = "true";
-      menuBtn.addEventListener("click", () => {
-        navbar.classList.toggle("active");
-      });
-    }
-
-    if (!user) {
-      await syncHeaderCartCount();
-
-      if (profile) {
-        profile.innerHTML = `
-          <p class="name">Guest User</p>
-          <p>Browse everything freely and sign in when you're ready to checkout.</p>
-          <div class="flex">
-            <a href="signin.html" class="btn">sign in</a>
-            <a href="register.html" class="delete-btn">register</a>
-          </div>
-        `;
-      }
-
-      return;
-    }
-
-    const userNameEl = document.getElementById("userName");
-    const userEmailEl = document.getElementById("userEmail");
-    const userIdEl = document.getElementById("userId");
-
-    if (userNameEl) userNameEl.textContent = user.name || "N/A";
-    if (userEmailEl) userEmailEl.textContent = user.email || "N/A";
-    if (userIdEl) userIdEl.textContent = user.id || "N/A";
-
-    const deptSpan = document.getElementById("userDept");
-    if (deptSpan) {
-      const deptContainer = deptSpan.parentElement;
-
-      if (user.user_type === "external") {
-        deptContainer.textContent = "External User";
-      } else {
-        deptSpan.textContent = user.department || "N/A";
-      }
-    }
-
-    await syncHeaderCartCount();
-
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (logoutBtn && !logoutBtn.dataset.bound) {
-      logoutBtn.dataset.bound = "true";
-      logoutBtn.addEventListener("click", () => {
-        localStorage.removeItem("user");
-        localStorage.removeItem("powers");
-        window.location.href = "index.html";
-      });
-    }
-  } catch (err) {
-    console.error("❌ Initialization error:", err);
-  }
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 window.addEventListener("focus", () => {
-  syncHeaderCartCount();
+    syncHeaderCartCount();
+    initializeUserInfo();
 });
 
 document.addEventListener("cart:updated", () => {
-  syncHeaderCartCount();
+    syncHeaderCartCount();
 });

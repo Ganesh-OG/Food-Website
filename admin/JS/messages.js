@@ -1,16 +1,25 @@
 import { renderAdminShell, supabase, showToast, createStatusTag, escapeHtml } from "./common.js";
 
 let messages = [];
+let canReview = false;
+let canResolve = false;
+let canDelete = false;
 
 document.addEventListener("DOMContentLoaded", initMessages);
 
 async function initMessages() {
-    const root = renderAdminShell({
+    const view = await renderAdminShell({
         title: "Messages",
-        subtitle: "Website contact messages moved from Firebase contact data to the Supabase contacts table."
+        subtitle: "Contact inbox visibility and actions are filtered by your message powers.",
+        requiredAnyPower: ["message_view", "message_reply", "message_delete", "message_mark_answered"]
     });
 
-    if (!root) return;
+    if (!view?.root) return;
+
+    const { root, hasPower } = view;
+    canReview = hasPower("message_reply");
+    canResolve = hasPower("message_mark_answered");
+    canDelete = hasPower("message_delete");
 
     root.innerHTML = `
         <div class="card">
@@ -80,11 +89,13 @@ function renderMessages() {
                 <div>${createStatusTag(item.Status || "Pending")}</div>
             </div>
             <p>${escapeHtml(item.message || "")}</p>
-            <div class="compact-actions">
-                <button class="btn-secondary" data-status="${escapeHtml(item.id)}" data-value="Reviewed">Mark Reviewed</button>
-                <button class="btn" data-status="${escapeHtml(item.id)}" data-value="Resolved">Mark Resolved</button>
-                <button class="btn-danger" data-delete="${escapeHtml(item.id)}">Delete</button>
-            </div>
+            ${canReview || canResolve || canDelete ? `
+                <div class="compact-actions">
+                    ${canReview ? `<button class="btn-secondary" data-status="${escapeHtml(item.id)}" data-value="Reviewed">Mark Reviewed</button>` : ""}
+                    ${canResolve ? `<button class="btn" data-status="${escapeHtml(item.id)}" data-value="Resolved">Mark Resolved</button>` : ""}
+                    ${canDelete ? `<button class="btn-danger" data-delete="${escapeHtml(item.id)}">Delete</button>` : ""}
+                </div>
+            ` : ""}
         </div>
     `).join("");
 
