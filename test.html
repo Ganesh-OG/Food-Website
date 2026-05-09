@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Image Upload</title>
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial,sans-serif;
+        }
+
+        body{
+            background:#111;
+            color:white;
+            height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+        }
+
+        .upload-box{
+            width:350px;
+            background:#1e1e1e;
+            padding:30px;
+            border-radius:12px;
+            text-align:center;
+            box-shadow:0 0 20px rgba(0,0,0,0.5);
+        }
+
+        h2{
+            margin-bottom:20px;
+        }
+
+        input{
+            width:100%;
+            padding:10px;
+            background:#2b2b2b;
+            border:none;
+            color:white;
+            border-radius:6px;
+            margin-bottom:20px;
+        }
+
+        button{
+            width:100%;
+            padding:12px;
+            border:none;
+            border-radius:6px;
+            background:#00b894;
+            color:white;
+            font-size:16px;
+            cursor:pointer;
+            transition:0.3s;
+        }
+
+        button:hover{
+            background:#019875;
+        }
+
+        #status{
+            margin-top:15px;
+            font-size:14px;
+        }
+
+        img{
+            width:100px;
+            height:100px;
+            object-fit:contain;
+            margin-bottom:15px;
+            display:none;
+            border-radius:8px;
+            background:white;
+            padding:5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="upload-box">
+
+        <h2>Upload Logo</h2>
+
+        <img id="preview" />
+
+        <input type="file" id="fileInput" accept="image/*" />
+
+        <button onclick="uploadImage()">
+            Upload Image
+        </button>
+
+        <p id="status"></p>
+
+    </div>
+
+    <script>
+
+        const GITHUB_TOKEN = "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";
+
+        const USERNAME = "Ganesh-OG";
+
+        const REPO = "Food-Website";
+
+        const FOLDER_PATH = "Images/logo";
+
+
+
+        const fileInput = document.getElementById("fileInput");
+        const preview = document.getElementById("preview");
+        const statusText = document.getElementById("status");
+
+
+
+        fileInput.addEventListener("change", () => {
+
+            const file = fileInput.files[0];
+
+            if(file){
+
+                preview.src = URL.createObjectURL(file);
+
+                preview.style.display = "block";
+            }
+        });
+
+
+
+        async function uploadImage(){
+
+            const file = fileInput.files[0];
+
+            if(!file){
+
+                statusText.innerText = "Please select an image.";
+
+                statusText.style.color = "red";
+
+                return;
+            }
+
+
+
+            statusText.innerText = "Uploading...";
+
+            statusText.style.color = "#00ff99";
+
+
+
+            const reader = new FileReader();
+
+
+
+            reader.onload = async function(){
+
+                const base64Data = reader.result.split(",")[1];
+
+                const fileName = file.name;
+
+
+
+                const url =
+                `https://api.github.com/repos/${USERNAME}/${REPO}/contents/${FOLDER_PATH}/${fileName}`;
+
+
+
+                try{
+
+                    const response = await fetch(url, {
+
+                        method: "PUT",
+
+                        headers: {
+
+                            "Authorization": `token ${GITHUB_TOKEN}`,
+
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+
+                            message: `Uploaded ${fileName}`,
+
+                            content: base64Data
+                        })
+                    });
+
+
+
+                    const data = await response.json();
+
+
+
+                    if(response.ok){
+
+                        statusText.innerHTML =
+                        `Upload Successful!<br><br>
+                        <a href="${data.content.html_url}" target="_blank" style="color:#00ff99;">
+                            View File
+                        </a>`;
+
+                    }else{
+
+                        console.log(data);
+
+                        statusText.innerText =
+                        "Upload failed. Check console.";
+
+                        statusText.style.color = "red";
+                    }
+
+                }catch(error){
+
+                    console.error(error);
+
+                    statusText.innerText = "Error uploading image.";
+
+                    statusText.style.color = "red";
+                }
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+    </script>
+
+</body>
+</html>
