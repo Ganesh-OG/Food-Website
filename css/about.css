@@ -22,10 +22,10 @@
 }
 
 .steps .box-container .box {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--surface);
   backdrop-filter: blur(14px);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--line-soft);
   padding: 1.5rem;
   text-align: center;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
@@ -48,7 +48,7 @@
 .steps .box-container .box h3 {
   margin: 0;
   font-size: 1.5rem;
-  color: var(--black);
+  color: var(--text-strong);
   text-transform: capitalize;
 }
 

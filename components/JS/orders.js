@@ -73,7 +73,7 @@ function updateEmptyStateFor(status = "") {
         return;
     }
 
-    const matchingOrders = ordersData.filter(order => order.status === status);
+    const matchingOrders = ordersData.filter(order => normalizeOrderStatus(order.status) === status);
     if (matchingOrders.length === 0) {
         showEmptyState(`No Orders in ${STATUS_LABELS[status]}`);
     } else {
@@ -113,13 +113,18 @@ async function loadOrders() {
         let rows = "";
 
         if (order.products) {
-            Object.values(order.products).forEach(p => {
+            Object.entries(order.products).forEach(([key, p]) => {
+                if (key === "__meta") return;
+                const notDelivered = String(p.delivery_status || "").toLowerCase() === "not delivered";
                 rows += `
-                    <tr>
+                    <tr class="${notDelivered ? "refunded-row" : ""}">
                         <td>${p.name}</td>
                         <td>₹ ${p.price}</td>
                         <td>${p.quantity}</td>
-                        <td>₹ ${p.total_cost}</td>
+                        <td>
+                            ₹ ${p.total_cost}
+                            ${notDelivered ? `<div class="refund-copy">Not delivered • Out of stock • Refunded ₹ ${Number(p.refunded_total || p.total_cost || 0).toFixed(2)}</div>` : ""}
+                        </td>
                     </tr>
                 `;
             });
@@ -143,7 +148,8 @@ async function loadOrders() {
             </table>
 
             <p>Total: ₹ ${order.overall_total}</p>
-            <p>Status: ${order.status}</p>
+            ${renderOrderMeta(order)}
+            <p>Status: ${normalizeOrderStatus(order.status)}</p>
         `;
 
         container.appendChild(div);
@@ -203,7 +209,7 @@ function filter(status) {
     let visibleCount = 0;
 
     document.querySelectorAll("#ordersContainer .box").forEach(box => {
-        const currentStatus = box.querySelector(".order-status")?.dataset.status;
+        const currentStatus = normalizeOrderStatus(box.querySelector(".order-status")?.dataset.status);
         const shouldShow = currentStatus === status;
 
         box.style.display = shouldShow ? "block" : "none";
@@ -218,4 +224,29 @@ function filter(status) {
     } else {
         hideEmptyState();
     }
+}
+
+function normalizeOrderStatus(status) {
+    const value = String(status || "").trim().toLowerCase();
+    if (value.startsWith("complete")) return "Complete";
+    if (value.startsWith("cancel")) return "Cancelled";
+    return "Order Pending";
+}
+
+function renderOrderMeta(order) {
+    const meta = order?.products?.__meta || {};
+    const notes = [
+        meta.cancellation_reason ? `Cancellation reason: ${meta.cancellation_reason}` : "",
+        meta.partial_cancellation_reason ? `Partial cancellation reason: ${meta.partial_cancellation_reason}` : ""
+    ].filter(Boolean);
+
+    if (!notes.length) {
+        return "";
+    }
+
+    return `
+        <p class="order-note">
+            ${notes.join(" • ")}
+        </p>
+    `;
 }

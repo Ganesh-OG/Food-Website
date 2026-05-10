@@ -99,11 +99,20 @@ function renderMessages() {
     const repliedCount = messages.filter(item => normalizeMessageStatus(item.Status) === "Replied").length;
 
     summary.innerHTML = `
-        <span class="tag pending">${pendingCount} pending</span>
-        <span class="tag complete">${readCount} read</span>
-        <span class="tag enabled">${repliedCount} replied</span>
+        <button class="tag pending messages-filter-chip ${status === "Pending" ? "active" : ""}" type="button" data-filter-status="Pending">${pendingCount} pending</button>
+        <button class="tag complete messages-filter-chip ${status === "Read" ? "active" : ""}" type="button" data-filter-status="Read">${readCount} read</button>
+        <button class="tag enabled messages-filter-chip ${status === "Replied" ? "active" : ""}" type="button" data-filter-status="Replied">${repliedCount} replied</button>
         <span class="muted">${filtered.length} shown</span>
     `;
+
+    summary.querySelectorAll("[data-filter-status]").forEach(button => {
+        button.addEventListener("click", () => {
+            const statusFilter = document.getElementById("messageStatus");
+            if (!statusFilter) return;
+            statusFilter.value = status === button.dataset.filterStatus ? "" : button.dataset.filterStatus;
+            renderMessages();
+        });
+    });
 
     if (!filtered.length) {
         mount.innerHTML = `<div class="empty">No messages match the current filter.</div>`;
@@ -329,8 +338,8 @@ async function deleteMessage(id) {
 
 function normalizeMessageStatus(value) {
     const normalized = String(value || "").trim().toLowerCase();
-    if (normalized === "read" || normalized === "reviewed") return "Read";
-    if (normalized === "replied" || normalized === "resolved" || normalized === "answered") return "Replied";
+    if (normalized === "read" || normalized === "reviewed" || normalized === "seen" || normalized === "opened" || normalized === "viewed") return "Read";
+    if (normalized === "replied" || normalized === "resolved" || normalized === "answered" || normalized === "reply sent") return "Replied";
     return "Pending";
 }
 

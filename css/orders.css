@@ -1,13 +1,94 @@
-/* Orders specific styles */
-.order-status[data-status="Order Pending"] { color: blue !important; }
-.order-status[data-status="Complete"] { color: green !important; }
-.order-status[data-status="Cancelled"] { color: red !important; }
-button { background-color: #cfcaca; padding: 10px; border-radius: 5px; cursor: pointer; width: calc(33.33% - 10px); text-align: center; margin: 5px 0; font-size: 14px; }
-.orders-button { width: 1135px; }
-button:hover { background-color: #89949c; }
-.box-container { display: flex; flex-wrap: wrap; justify-content: space-around; }
-.box { background-color: #f0f0f0; padding: 15px; border-radius: 8px; margin: 10px; }
-.small-item-details { width: 100%; border-collapse: collapse; margin-top: 10px; }
-.small-item-details th, .small-item-details td { padding: 8px; text-align: center; border: 1px solid #ddd; }
-@media (max-width: 768px) { .orders-button { width: 100%; } .box { width: 100%; } }
+.orders {
+    display: grid;
+    gap: 1.8rem;
+    justify-items: center;
+}
 
+.orders-button,
+#pendingBtn,
+#completeBtn,
+#cancelBtn {
+    width: 100%;
+    max-width: 36rem;
+    padding: 1.2rem 1.6rem;
+    border-radius: 999px;
+    border: var(--border);
+    background: var(--surface-strong);
+    color: var(--black);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    font-size: 1.6rem;
+}
+
+#pendingBtn,
+#completeBtn,
+#cancelBtn {
+    display: none;
+}
+
+.box-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(32rem, 1fr));
+    gap: 1.6rem;
+    width: 100%;
+}
+
+.box {
+    background: var(--surface);
+    border: var(--border);
+    border-radius: 2.2rem;
+    padding: 2rem;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
+}
+
+.order-status[data-status*="Pending"] { color: #2563eb !important; }
+.order-status[data-status*="Complete"] { color: #16a34a !important; }
+.order-status[data-status*="Cancelled"] { color: #dc2626 !important; }
+
+.small-item-details {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.4rem 0;
+}
+
+.small-item-details th,
+.small-item-details td {
+    padding: 1rem;
+    text-align: left;
+    border: 1px solid rgba(127, 127, 127, 0.18);
+    font-size: 1.4rem;
+}
+
+.small-item-details th {
+    background: rgba(127, 127, 127, 0.08);
+}
+
+.refunded-row {
+    background: rgba(220, 38, 38, 0.08);
+}
+
+.refund-copy,
+.order-note {
+    margin-top: .6rem;
+    color: #dc2626;
+    font-size: 1.3rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+#ordersContainer .empty {
+    max-width: 36rem;
+    margin: 0 auto;
+    border: 1px solid var(--line-soft);
+    border-radius: 2rem;
+    background: var(--surface);
+    color: #f87171;
+    box-shadow: var(--shadow);
+}
+
+@media (max-width: 768px) {
+    .box-container {
+        grid-template-columns: 1fr;
+    }
+}

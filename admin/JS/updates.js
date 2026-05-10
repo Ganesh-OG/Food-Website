@@ -12,25 +12,63 @@ import {
     createStatusTag,
     initAdminFilePickers
 } from "./common.js";
+import {
+    getDefaultLoaderConfig,
+    getLoaderImagePath,
+    hasStructuredLoaderConfig,
+    normalizeLoaderConfig,
+    setLoaderBaseConfig
+} from "../../components/JS/loader_config.js";
 
 let appConfig = null;
 let serviceStatus = null;
 let aboutContent = [];
 let contactConfigs = [];
 let heroSlides = [];
+let categoryRows = [];
 let editingHeroSlideId = null;
+let editingLoaderItemKey = null;
 let canManageFooter = false;
 let canControlSite = false;
 let canManageSlider = false;
 let canEditAbout = false;
+let canManageSiteLogo = false;
+let loaderConfigState = getDefaultLoaderConfig();
+let projectRootHandle = null;
+
+function refreshLoaderPanels() {
+    renderLoaderForm();
+    renderLoaderList();
+    renderLoaderConnectionState();
+}
+
+function renderLoaderConnectionState() {
+    const mount = document.getElementById("loaderConnectionState");
+    if (!mount) return;
+
+    mount.innerHTML = projectRootHandle
+        ? `<div class="loader-connection-note is-connected">Local project connected. Loader config and SVG files will be updated here.</div>`
+        : `<div class="loader-connection-note">Viewing loader from config. When saving, choose the <code>Final Supabase</code> project root folder that contains <code>admin</code>, <code>components</code>, and <code>images</code>.</div>`;
+}
 
 document.addEventListener("DOMContentLoaded", initUpdates);
 
 async function initUpdates() {
+    try {
+        const baseConfigResponse = await fetch("../components/config/loader-config.json", { cache: "no-store" });
+        if (baseConfigResponse.ok) {
+            const baseConfig = await baseConfigResponse.json();
+            setLoaderBaseConfig(baseConfig);
+            loaderConfigState = normalizeLoaderConfig(baseConfig);
+        }
+    } catch (error) {
+        console.warn("Unable to load loader-config.json, using fallback loader base config", error);
+    }
+
     const view = await renderAdminShell({
         title: "Website Updates",
         subtitle: "Each update panel opens only for roles with the matching management powers.",
-        requiredAnyPower: ["site_control", "about_edit", "slider_manage", "footer_manage"]
+        requiredAnyPower: ["site_control", "about_edit", "slider_manage", "footer_manage", "category_manage", "loader_manage", "site_logo_manage"]
     });
 
     if (!view?.root) return;
@@ -40,15 +78,24 @@ async function initUpdates() {
     canControlSite = hasPower("site_control");
     canManageSlider = hasPower("slider_manage");
     canEditAbout = hasPower("about_edit");
+    canManageSiteLogo = hasPower("site_logo_manage") || hasPower("site_control");
+    const canManageCategories = hasPower("site_control") || hasPower("category_manage");
+    const canManageLoader = hasPower("site_control") || hasPower("loader_manage");
     const activePanelId = canManageFooter
         ? "appConfigPanel"
         : canControlSite
             ? "serviceStatusPanel"
-            : canManageSlider
+            : canManageSiteLogo
+                ? "siteLogoPanel"
+                : canManageSlider
                 ? "heroPanel"
                 : canEditAbout
                     ? "aboutPanel"
-                    : "contactPanel";
+                    : canManageCategories
+                        ? "categoryPanel"
+                        : canManageLoader
+                            ? "loaderPanel"
+                            : "contactPanel";
 
     root.innerHTML = `
         <div class="updates-workspace">
@@ -65,6 +112,9 @@ async function initUpdates() {
                     <button class="updates-menu-item ${activePanelId === "serviceStatusPanel" ? "active" : ""}" type="button" data-update-target="serviceStatusPanel" ${canControlSite ? "" : "hidden"}>
                         <span>Service Status</span>
                     </button>
+                    <button class="updates-menu-item ${activePanelId === "siteLogoPanel" ? "active" : ""}" type="button" data-update-target="siteLogoPanel" ${canManageSiteLogo ? "" : "hidden"}>
+                        <span>Site Logo</span>
+                    </button>
                     <button class="updates-menu-item ${activePanelId === "heroPanel" ? "active" : ""}" type="button" data-update-target="heroPanel" ${canManageSlider ? "" : "hidden"}>
                         <span>Home Slider</span>
                     </button>
@@ -73,6 +123,12 @@ async function initUpdates() {
                     </button>
                     <button class="updates-menu-item ${activePanelId === "contactPanel" ? "active" : ""}" type="button" data-update-target="contactPanel" ${canManageFooter ? "" : "hidden"}>
                         <span>Contact Content</span>
+                    </button>
+                    <button class="updates-menu-item ${activePanelId === "categoryPanel" ? "active" : ""}" type="button" data-update-target="categoryPanel" ${canManageCategories ? "" : "hidden"}>
+                        <span>Category Manage</span>
+                    </button>
+                    <button class="updates-menu-item ${activePanelId === "loaderPanel" ? "active" : ""}" type="button" data-update-target="loaderPanel" ${canManageLoader ? "" : "hidden"}>
+                        <span>Loader Control</span>
                     </button>
                 </div>
             </aside>
@@ -108,6 +164,18 @@ async function initUpdates() {
                     </form>
                 </div>
 
+                <div class="card updates-panel ${activePanelId === "siteLogoPanel" ? "active" : ""}" id="siteLogoPanel" ${canManageSiteLogo && activePanelId === "siteLogoPanel" ? "" : "hidden"}>
+                    <div class="updates-panel-header">
+                        <h3>Site Logo</h3>
+                        <p class="muted">Upload the user-side header logo. The selected file is stored in app_config under the Logo field.</p>
+                    </div>
+                    <form id="siteLogoForm" class="form-grid">
+                        <input id="siteLogoAsset" class="full" type="file" accept="image/*" required>
+                        <button class="btn full" type="submit">Save Site Logo</button>
+                    </form>
+                    <div class="list updates-scroll-list" id="siteLogoList"></div>
+                </div>
+
                 <div class="card updates-panel ${activePanelId === "heroPanel" ? "active" : ""}" id="heroPanel" ${canManageSlider && activePanelId === "heroPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Home Slider</h3>
@@ -119,7 +187,7 @@ async function initUpdates() {
                         <input id="heroImage" class="full" type="file" accept="image/*" required>
                         <button class="btn full" type="submit">Add Slider Image</button>
                     </form>
-                    <div class="list" id="heroList"></div>
+                    <div class="list updates-scroll-list" id="heroList"></div>
                 </div>
 
                 <div class="card updates-panel ${activePanelId === "aboutPanel" ? "active" : ""}" id="aboutPanel" ${canEditAbout && activePanelId === "aboutPanel" ? "" : "hidden"}>
@@ -127,7 +195,7 @@ async function initUpdates() {
                         <h3>About Content</h3>
                         <p class="muted">Edit the About section separately with its own title, content, status, and image.</p>
                     </div>
-                    <div class="list" id="aboutList"></div>
+                    <div class="list updates-scroll-list" id="aboutList"></div>
                 </div>
 
                 <div class="card updates-panel ${activePanelId === "contactPanel" ? "active" : ""}" id="contactPanel" ${canManageFooter && activePanelId === "contactPanel" ? "" : "hidden"}>
@@ -135,7 +203,64 @@ async function initUpdates() {
                         <h3>Contact Content</h3>
                         <p class="muted">Manage the Contact section independently from About.</p>
                     </div>
-                    <div class="list" id="contactList"></div>
+                    <div class="list updates-scroll-list" id="contactList"></div>
+                </div>
+
+                <div class="card updates-panel ${activePanelId === "categoryPanel" ? "active" : ""}" id="categoryPanel" ${canManageCategories && activePanelId === "categoryPanel" ? "" : "hidden"}>
+                    <div class="updates-panel-header">
+                        <h3>Category Manage</h3>
+                        <p class="muted">Add, edit, or remove the categories shown on the home page.</p>
+                    </div>
+                    <form id="categoryForm" class="form-grid category-create-form">
+                        <input id="categoryName" type="text" placeholder="Category name" required>
+                        <input id="categoryImage" type="file" accept="image/*" required>
+                        <button class="btn full" type="submit">Add Category</button>
+                    </form>
+                    <div class="list updates-scroll-list" id="categoryList"></div>
+                </div>
+
+                <div class="card updates-panel ${activePanelId === "loaderPanel" ? "active" : ""}" id="loaderPanel" ${canManageLoader && activePanelId === "loaderPanel" ? "" : "hidden"}>
+                    <div class="updates-panel-header">
+                        <h3>Loader Manage</h3>
+                        <p class="muted">This panel uses the same <code>components/config/loader-config.json</code> that the site loader reads.</p>
+                        <p class="muted">Add, replace, delete, and speed changes update that config and the local <code>images/loader</code> folder directly.</p>
+                        <div id="loaderConnectionState"></div>
+                        <div class="compact-actions">
+                            <button class="btn-secondary" type="button" id="connectLoaderProject">Connect Local Project</button>
+                        </div>
+                    </div>
+                    <div class="loader-section-heading">
+                        <h4>1. Add New Logo</h4>
+                        <p class="muted">Upload a new SVG logo and choose its initial color.</p>
+                    </div>
+                    <form id="loaderAddForm" class="form-grid">
+                        <input id="loaderNewLabel" type="text" placeholder="New logo name" required>
+                        <input id="loaderNewColor" type="color" value="#f7a600">
+                        <input id="loaderNewFile" class="full" type="file" accept=".svg,image/svg+xml" required>
+                        <button class="btn full" type="submit">Add New Logo</button>
+                    </form>
+                    <div class="loader-section-heading">
+                        <h4>2. Edit Existing Logos</h4>
+                        <p class="muted">Edit, replace, or delete the logos already used by the loader.</p>
+                    </div>
+                    <div class="list" id="loaderList"></div>
+                    <div class="loader-section-heading">
+                        <h4>3. Adjust Speed</h4>
+                        <p class="muted">Control logo/color cycle speed and ball movement speed.</p>
+                    </div>
+                    <form id="loaderSpeedForm" class="form-grid">
+                        <div>
+                            <label for="loaderCycleSeconds">Color/logo speed</label>
+                            <input id="loaderCycleSeconds" type="number" min="2" max="20" step="0.1" placeholder="Color cycle seconds">
+                            <div class="updates-file-meta">Lower value = faster color and logo switching.</div>
+                        </div>
+                        <div>
+                            <label for="loaderOrbitSeconds">Ball movement speed</label>
+                            <input id="loaderOrbitSeconds" type="number" min="2" max="20" step="0.1" placeholder="Orbit seconds">
+                            <div class="updates-file-meta">Lower value = faster small ball movement.</div>
+                        </div>
+                        <button class="btn full" type="submit">Save Speed</button>
+                    </form>
                 </div>
             </section>
         </div>
@@ -143,7 +268,12 @@ async function initUpdates() {
 
     document.getElementById("appConfigForm")?.addEventListener("submit", saveAppConfig);
     document.getElementById("serviceStatusForm")?.addEventListener("submit", saveServiceStatus);
+    document.getElementById("siteLogoForm")?.addEventListener("submit", saveSiteLogo);
     document.getElementById("heroForm")?.addEventListener("submit", addHeroSlide);
+    document.getElementById("categoryForm")?.addEventListener("submit", addCategoryRow);
+    document.getElementById("loaderSpeedForm")?.addEventListener("submit", saveLoaderSpeed);
+    document.getElementById("loaderAddForm")?.addEventListener("submit", addLoaderLogo);
+    document.getElementById("connectLoaderProject")?.addEventListener("click", connectLoaderProjectFolder);
     bindUpdatePanelMenu();
     initAdminFilePickers(root);
 
@@ -151,12 +281,13 @@ async function initUpdates() {
 }
 
 async function loadUpdateData() {
-    const [appRes, serviceRes, aboutRes, contactRes, heroRes] = await Promise.all([
+    const [appRes, serviceRes, aboutRes, contactRes, heroRes, categoryRes] = await Promise.all([
         supabase.from("app_config").select("*").limit(1),
         supabase.from("service_status").select("*").limit(1),
         supabase.from("about_content").select("*").order("section"),
         supabase.from("contact_config").select("*").order("id"),
-        supabase.from("hero_slider").select("*").order("id")
+        supabase.from("hero_slider").select("*").order("id"),
+        supabase.from("category").select("*").order("category_name")
     ]);
 
     appConfig = appRes.data?.[0] || null;
@@ -164,6 +295,7 @@ async function loadUpdateData() {
     aboutContent = aboutRes.data || [];
     contactConfigs = contactRes.data || [];
     heroSlides = heroRes.data || [];
+    categoryRows = categoryRes.data || [];
 
     renderUpdateForms();
 }
@@ -181,6 +313,9 @@ function renderUpdateForms() {
     renderHeroList();
     renderAboutList("About", "aboutList");
     renderContactList();
+    renderCategoryList();
+    refreshLoaderPanels();
+    renderSiteLogoList();
 }
 
 function bindUpdatePanelMenu() {
@@ -370,6 +505,299 @@ function renderContactList() {
     initAdminFilePickers(mount);
 }
 
+function renderCategoryList() {
+    const mount = document.getElementById("categoryList");
+    if (!mount) return;
+
+    mount.innerHTML = categoryRows.length
+        ? categoryRows.map(item => `
+            <form class="list-item category-form" data-category-id="${escapeHtml(item.id ?? item.category_name)}" data-current-image="${escapeHtml(item.display_image || "")}">
+                <div class="category-form-grid">
+                    <div class="category-form-fields">
+                        <div class="category-form-heading">
+                            <span class="eyebrow">Category Item</span>
+                            <strong>${escapeHtml(item.category_name || "Unnamed category")}</strong>
+                            <p class="muted">Update the category label or replace the display image used on the home page.</p>
+                        </div>
+                        <input type="text" name="category_name" value="${escapeHtml(item.category_name || "")}" placeholder="Category name" required>
+                        <input type="file" name="display_image" accept="image/*">
+                        <div class="updates-file-meta"><strong>Stored file:</strong> ${escapeHtml(item.display_image || "No image")}</div>
+                    </div>
+                    <div class="category-preview-card">
+                        ${item.display_image
+                            ? `<img class="thumb category-thumb" src="${getStoragePublicUrl("Food-Website-Storage", `category/${item.display_image}`)}" alt="${escapeHtml(item.category_name || "Category")}">`
+                            : `<div class="category-thumb category-thumb-empty">No image</div>`
+                        }
+                    </div>
+                </div>
+                <div class="compact-actions category-actions">
+                    <button class="btn" type="submit">Save Category</button>
+                    <button class="btn-danger" type="button" data-delete-category="${escapeHtml(item.id ?? item.category_name)}" data-file="${escapeHtml(item.display_image || "")}">Delete</button>
+                </div>
+            </form>
+        `).join("")
+        : `<div class="empty">No category rows found.</div>`;
+
+    mount.querySelectorAll(".category-form").forEach(form => {
+        form.addEventListener("submit", saveCategoryRow);
+    });
+
+    mount.querySelectorAll("[data-delete-category]").forEach(button => {
+        button.addEventListener("click", () => deleteCategoryRow(button.dataset.deleteCategory, button.dataset.file));
+    });
+
+    initAdminFilePickers(mount);
+}
+
+function renderLoaderList() {
+    const mount = document.getElementById("loaderList");
+    if (!mount) return;
+
+    const config = getCurrentLoaderConfig();
+
+    mount.innerHTML = `
+        ${config.items.length ? config.items.map((item, index) => `
+            ${editingLoaderItemKey === getLoaderItemDomKey(item, index) ? `
+                <form class="list-item loader-logo-form" data-loader-item-key="${escapeHtml(getLoaderItemDomKey(item, index))}">
+                    ${renderLoaderItemPreview(item)}
+                    <div class="loader-logo-fields">
+                        <input type="text" name="label" value="${escapeHtml(item.label || "")}" placeholder="Logo name" required>
+                        <input type="color" name="color" value="${escapeHtml(normalizeHexColor(item.color, "#f7a600"))}">
+                        <input type="file" name="file" accept=".svg,image/svg+xml">
+                        <div class="updates-file-meta">Choose a new SVG file only if you want to replace this logo icon.</div>
+                    </div>
+                    <div class="compact-actions">
+                        <button class="btn-secondary" type="submit">Save</button>
+                        <button class="btn-ghost" type="button" data-cancel-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Cancel</button>
+                        <button class="btn-danger" type="button" data-delete-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Delete</button>
+                    </div>
+                </form>
+            ` : `
+                <div class="list-item loader-logo-card">
+                    ${renderLoaderItemPreview(item)}
+                    <div class="loader-logo-copy">
+                        <strong>${escapeHtml(item.label || `Logo ${index + 1}`)}</strong>
+                        <div class="updates-file-meta">${escapeHtml(item.fileName || "")}</div>
+                        <div class="updates-file-meta">Color ${escapeHtml(item.color || "")}</div>
+                    </div>
+                    <div class="compact-actions">
+                        <button class="btn-secondary" type="button" data-edit-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Edit</button>
+                        <button class="btn-danger" type="button" data-delete-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Delete</button>
+                    </div>
+                </div>
+            `}
+        `).join("") : `<div class="empty">No loader logos added yet.</div>`}
+    `;
+
+    mount.querySelectorAll(".loader-logo-form").forEach(form => {
+        form.addEventListener("submit", saveLoaderItem);
+    });
+
+    mount.querySelectorAll("[data-edit-loader-item]").forEach(button => {
+        button.addEventListener("click", () => {
+            editingLoaderItemKey = button.dataset.editLoaderItem;
+            renderLoaderList();
+        });
+    });
+
+    mount.querySelectorAll("[data-cancel-loader-item]").forEach(button => {
+        button.addEventListener("click", () => {
+            editingLoaderItemKey = null;
+            renderLoaderList();
+        });
+    });
+
+    mount.querySelectorAll("[data-delete-loader-item]").forEach(button => {
+        button.addEventListener("click", () => deleteLoaderItem(button.dataset.deleteLoaderItem));
+    });
+}
+
+function renderLoaderForm() {
+    const config = getCurrentLoaderConfig();
+    const cycleInput = document.getElementById("loaderCycleSeconds");
+    const orbitInput = document.getElementById("loaderOrbitSeconds");
+    if (cycleInput) cycleInput.value = String(config.cycleSeconds);
+    if (orbitInput) orbitInput.value = String(config.orbitSeconds);
+}
+
+async function connectLoaderProjectFolder() {
+    if (!window.showDirectoryPicker) {
+        showToast("This browser does not support direct folder editing", "error");
+        return false;
+    }
+
+    try {
+        const handle = await window.showDirectoryPicker({ mode: "readwrite" });
+        await ensureLoaderProjectShape(handle);
+        projectRootHandle = handle;
+
+        const configFromDisk = await readLoaderConfigFromProject(handle);
+        loaderConfigState = configFromDisk;
+        showToast("Loader config connected");
+        refreshLoaderPanels();
+        return true;
+    } catch (error) {
+        if (error?.name === "AbortError") return false;
+        console.error(error);
+        showToast(error.message || "Unable to connect project folder", "error");
+        return false;
+    }
+}
+
+async function ensureLoaderProjectConnected() {
+    if (projectRootHandle) {
+        return true;
+    }
+
+    showToast("Connect the local project once to save loader changes");
+    return connectLoaderProjectFolder();
+}
+
+function getLoaderRootFolderError() {
+    return "Choose the Final Supabase project root folder that contains admin, components, and images.";
+}
+
+async function ensureLoaderProjectShape(rootHandle) {
+    const imagesHandle = await rootHandle.getDirectoryHandle("images");
+    await imagesHandle.getDirectoryHandle("loader");
+    const componentsHandle = await rootHandle.getDirectoryHandle("components");
+    const configHandle = await componentsHandle.getDirectoryHandle("config");
+    await configHandle.getFileHandle("loader-config.json");
+}
+
+async function readLoaderConfigFromProject(rootHandle) {
+    const configHandle = await getLoaderConfigFileHandle(rootHandle);
+    const configFile = await configHandle.getFile();
+    const rawConfig = await configFile.text();
+    const parsedConfig = hasStructuredLoaderConfig(rawConfig)
+        ? normalizeLoaderConfig(rawConfig)
+        : getDefaultLoaderConfig();
+
+    const folderFiles = await listLoaderSvgFileNames(rootHandle);
+    const mergedItems = mergeLoaderItemsWithFolder(parsedConfig.items, folderFiles);
+    const nextConfig = normalizeLoaderConfig({
+        ...parsedConfig,
+        items: mergedItems,
+        customAssets: parsedConfig.customAssets || {}
+    });
+
+    setLoaderBaseConfig(nextConfig);
+    return nextConfig;
+}
+
+async function writeLoaderConfigToProject(rootHandle, config) {
+    const configHandle = await getLoaderConfigFileHandle(rootHandle);
+    const writable = await configHandle.createWritable();
+    await writable.write(JSON.stringify(config, null, 2));
+    await writable.close();
+}
+
+async function listLoaderSvgFileNames(rootHandle) {
+    const loaderDirHandle = await getLoaderDirectoryHandle(rootHandle);
+    const names = [];
+
+    for await (const [name, handle] of loaderDirHandle.entries()) {
+        if (handle.kind === "file" && /\.svg$/i.test(name)) {
+            names.push(name);
+        }
+    }
+
+    names.sort((first, second) => first.localeCompare(second, undefined, { sensitivity: "base" }));
+    return names;
+}
+
+async function writeNewLoaderSvgFile(loaderDirectoryHandle, file, label) {
+    const rawBaseName = slugifyLoaderAssetName(label || file.name.replace(/\.svg$/i, ""));
+    let fileName = `${rawBaseName}.svg`;
+    let counter = 2;
+
+    while (await fileExists(loaderDirectoryHandle, fileName)) {
+        fileName = `${rawBaseName}-${counter}.svg`;
+        counter += 1;
+    }
+
+    const fileHandle = await loaderDirectoryHandle.getFileHandle(fileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(await file.text());
+    await writable.close();
+    return fileName;
+}
+
+async function replaceLoaderSvgFile(rootHandle, targetFileName, file) {
+    const loaderDirectoryHandle = await getLoaderDirectoryHandle(rootHandle);
+    const fileHandle = await loaderDirectoryHandle.getFileHandle(targetFileName, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(await file.text());
+    await writable.close();
+}
+
+async function deleteLoaderSvgFile(rootHandle, fileName) {
+    const loaderDirectoryHandle = await getLoaderDirectoryHandle(rootHandle);
+    await loaderDirectoryHandle.removeEntry(fileName);
+}
+
+async function fileExists(directoryHandle, fileName) {
+    try {
+        await directoryHandle.getFileHandle(fileName);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function mergeLoaderItemsWithFolder(items, folderFileNames) {
+    const normalizedItems = Array.isArray(items) ? items.map(item => ({ ...item })) : [];
+    const existingByFileName = new Map(
+        normalizedItems.map(item => [String(item.fileName || "").toLowerCase(), item])
+    );
+
+    folderFileNames.forEach((fileName, index) => {
+        const fileKey = String(fileName || "").toLowerCase();
+        if (existingByFileName.has(fileKey)) return;
+
+        const fallback = getDefaultLoaderConfig().items[index] || getDefaultLoaderConfig().items[0];
+        normalizedItems.push({
+            key: slugifyLoaderAssetName(fileName.replace(/\.svg$/i, "")),
+            source: "local",
+            label: fileName.replace(/\.svg$/i, ""),
+            fileName,
+            color: fallback?.color || "#f7a600"
+        });
+    });
+
+    return normalizedItems.filter(item => folderFileNames.some(fileName => String(fileName).toLowerCase() === String(item.fileName || "").toLowerCase()));
+}
+
+async function getLoaderDirectoryHandle(rootHandle) {
+    const imagesHandle = await rootHandle.getDirectoryHandle("images");
+    return imagesHandle.getDirectoryHandle("loader");
+}
+
+async function getLoaderConfigFileHandle(rootHandle) {
+    const componentsHandle = await rootHandle.getDirectoryHandle("components");
+    const configHandle = await componentsHandle.getDirectoryHandle("config");
+    return configHandle.getFileHandle("loader-config.json");
+}
+
+function renderSiteLogoList() {
+    const mount = document.getElementById("siteLogoList");
+    if (!mount) return;
+
+    const fileName = getAppConfigLogoFileName(appConfig);
+    if (!fileName) {
+        mount.innerHTML = `<div class="empty">No site logo configured yet.</div>`;
+        return;
+    }
+
+    mount.innerHTML = `
+        <div class="list-item">
+            <strong>Current site logo</strong>
+            <div class="updates-file-meta">${escapeHtml(fileName)}</div>
+            <img class="preview-image" src="${getStoragePublicUrl("Food-Website-Storage", `Logo/${fileName}`)}" alt="Current site logo">
+        </div>
+    `;
+}
+
 async function saveAppConfig(event) {
     event.preventDefault();
 
@@ -420,6 +848,51 @@ async function saveServiceStatus(event) {
     await loadUpdateData();
 }
 
+async function saveSiteLogo(event) {
+    event.preventDefault();
+
+    const file = document.getElementById("siteLogoAsset").files[0];
+    if (!file) {
+        showToast("Choose a logo file first", "error");
+        return;
+    }
+
+    const fileName = fileNameWithTimestamp(file);
+    const previousFileName = getAppConfigLogoFileName(appConfig);
+
+    try {
+        await uploadToStorage("Food-Website-Storage", `Logo/${fileName}`, file);
+
+        const payload = setAppConfigLogoValue({
+            ...(appConfig || {}),
+            ...(appConfig?.id ? { id: appConfig.id } : {}),
+        }, appConfig, [{ file_name: fileName }]);
+
+        const query = appConfig?.id
+            ? supabase.from("app_config").update(payload).eq("id", appConfig.id)
+            : supabase.from("app_config").insert([payload]);
+
+        const { error } = await query;
+        if (error) throw error;
+
+        if (previousFileName && previousFileName !== fileName) {
+            await removeFromStorage("Food-Website-Storage", `Logo/${previousFileName}`);
+        }
+
+        showToast("Site logo updated");
+        document.getElementById("siteLogoForm").reset();
+        await loadUpdateData();
+    } catch (error) {
+        console.error(error);
+        try {
+            await removeFromStorage("Food-Website-Storage", `Logo/${fileName}`);
+        } catch (cleanupError) {
+            console.error(cleanupError);
+        }
+        showToast(error.message || "Unable to save site logo", "error");
+    }
+}
+
 async function addHeroSlide(event) {
     event.preventDefault();
 
@@ -454,6 +927,344 @@ async function addHeroSlide(event) {
         console.error(error);
         showToast(error.message || "Unable to add slide", "error");
     }
+}
+
+async function addCategoryRow(event) {
+    event.preventDefault();
+
+    const name = document.getElementById("categoryName").value.trim();
+    const imageFile = document.getElementById("categoryImage").files[0];
+    if (!name || !imageFile) {
+        showToast("Enter category name and image", "error");
+        return;
+    }
+
+    const fileName = fileNameWithTimestamp(imageFile);
+
+    try {
+        await uploadToStorage("Food-Website-Storage", `category/${fileName}`, imageFile);
+        const { error } = await supabase
+            .from("category")
+            .insert([{ category_name: name, display_image: fileName }]);
+
+        if (error) throw error;
+
+        showToast("Category added");
+        document.getElementById("categoryForm").reset();
+        await loadUpdateData();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to add category", "error");
+    }
+}
+
+async function saveCategoryRow(event) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const categoryId = form.dataset.categoryId;
+    const existingRow = categoryRows.find(item => String(item.id ?? item.category_name) === String(categoryId));
+    const currentImage = form.dataset.currentImage || "";
+    const imageFile = form.elements.display_image.files[0];
+    let fileName = currentImage;
+
+    try {
+        if (imageFile) {
+            fileName = fileNameWithTimestamp(imageFile);
+            await uploadToStorage("Food-Website-Storage", `category/${fileName}`, imageFile);
+            if (currentImage && currentImage !== fileName) {
+                await removeFromStorage("Food-Website-Storage", `category/${currentImage}`);
+            }
+        }
+
+        const payload = {
+            category_name: form.elements.category_name.value.trim(),
+            display_image: fileName || null
+        };
+
+        const { error } = await matchCategoryRow(
+            supabase.from("category").update(payload),
+            existingRow,
+            categoryId
+        );
+
+        if (error) throw error;
+
+        showToast("Category updated");
+        await loadUpdateData();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to update category", "error");
+    }
+}
+
+async function deleteCategoryRow(categoryId, fileName) {
+    const confirmed = window.confirm("Delete this category?");
+    if (!confirmed) return;
+
+    try {
+        const existingRow = categoryRows.find(item => String(item.id ?? item.category_name) === String(categoryId));
+        const { error } = await matchCategoryRow(
+            supabase.from("category").delete(),
+            existingRow,
+            categoryId
+        );
+
+        if (error) throw error;
+        if (fileName) {
+            await removeFromStorage("Food-Website-Storage", `category/${fileName}`);
+        }
+
+        showToast("Category deleted");
+        await loadUpdateData();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to delete category", "error");
+    }
+}
+
+function getCurrentLoaderConfig() {
+    return normalizeLoaderConfig(loaderConfigState);
+}
+
+function getLoaderItemDomKey(item, index) {
+    return `${String(item?.key || "loader-item").trim().toLowerCase()}::${index}`;
+}
+
+function renderLoaderItemPreview(item) {
+    return `
+        <div class="loader-item-thumb">
+            ${item?.source === "custom" && item?.svg
+                ? `<div class="loader-inline-asset-preview">${item.svg}</div>`
+                : `<img class="loader-asset-thumb" src="../${escapeHtml(getLoaderImagePath(item?.fileName || ""))}" alt="${escapeHtml(item?.label || "Loader icon")}">`
+            }
+        </div>
+    `;
+}
+
+function getLoaderItemIndexByDomKey(config, domKey) {
+    return config.items.findIndex((item, index) => getLoaderItemDomKey(item, index) === domKey);
+}
+
+async function saveLoaderSpeed(event) {
+    event.preventDefault();
+
+    try {
+        const currentConfig = getCurrentLoaderConfig();
+        const nextConfig = normalizeLoaderConfig({
+            ...currentConfig,
+            cycleSeconds: document.getElementById("loaderCycleSeconds")?.value || currentConfig.cycleSeconds,
+            orbitSeconds: document.getElementById("loaderOrbitSeconds")?.value || currentConfig.orbitSeconds,
+            items: currentConfig.items,
+            customAssets: currentConfig.customAssets || {}
+        });
+
+        await saveLoaderConfig(nextConfig);
+        showToast("Loader speed updated");
+        refreshLoaderPanels();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to save loader speed", "error");
+    }
+}
+
+async function addLoaderLogo(event) {
+    event.preventDefault();
+
+    const labelInput = document.getElementById("loaderNewLabel");
+    const colorInput = document.getElementById("loaderNewColor");
+    const fileInput = document.getElementById("loaderNewFile");
+    const file = fileInput?.files?.[0];
+
+    if (!file) {
+        showToast("Choose an SVG file first", "error");
+        return;
+    }
+
+    if (!/\.svg$/i.test(file.name)) {
+        showToast("Please choose an SVG file", "error");
+        return;
+    }
+
+    try {
+        const isConnected = await ensureLoaderProjectConnected();
+        if (!isConnected) {
+            return;
+        }
+
+        const currentConfig = getCurrentLoaderConfig();
+        const loaderDirectoryHandle = await getLoaderDirectoryHandle(projectRootHandle);
+        const label = String(labelInput?.value || file.name.replace(/\.svg$/i, "")).trim() || "Loader Logo";
+        const key = slugifyLoaderAssetName(label);
+        const color = normalizeHexColor(colorInput?.value, "#f7a600");
+        const fileName = await writeNewLoaderSvgFile(loaderDirectoryHandle, file, label);
+
+        const nextConfig = normalizeLoaderConfig({
+            ...currentConfig,
+            items: [
+                ...currentConfig.items,
+                { key, source: "local", label, fileName, color }
+            ],
+            customAssets: {}
+        });
+
+        await saveLoaderConfig(nextConfig);
+        showToast("Loader logo added");
+        document.getElementById("loaderAddForm")?.reset();
+        const newColorInput = document.getElementById("loaderNewColor");
+        if (newColorInput) newColorInput.value = "#f7a600";
+        refreshLoaderPanels();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to add loader logo", "error");
+    }
+}
+
+async function saveLoaderItem(event) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const itemKey = form.dataset.loaderItemKey;
+    const currentConfig = getCurrentLoaderConfig();
+    const itemIndex = getLoaderItemIndexByDomKey(currentConfig, itemKey);
+    if (itemIndex < 0) return;
+
+    const currentItem = currentConfig.items[itemIndex];
+    const nextItems = currentConfig.items.map(item => ({ ...item }));
+    const nextLabel = form.elements.label.value.trim() || currentItem.label || `Logo ${itemIndex + 1}`;
+    const nextColor = normalizeHexColor(form.elements.color.value, currentItem.color || "#f7a600");
+    const nextFile = form.elements.file.files?.[0];
+
+    try {
+        const isConnected = await ensureLoaderProjectConnected();
+        if (!isConnected) {
+            return;
+        }
+
+        let nextItem = {
+            ...currentItem,
+            label: nextLabel,
+            color: nextColor
+        };
+
+        if (nextFile) {
+            if (!/\.svg$/i.test(nextFile.name)) {
+                throw new Error("Please choose an SVG file");
+            }
+
+            const loaderDirectoryHandle = await getLoaderDirectoryHandle(projectRootHandle);
+            const nextFileName = await writeNewLoaderSvgFile(loaderDirectoryHandle, nextFile, nextLabel);
+
+            nextItem = {
+                key: nextItem.key,
+                source: "local",
+                label: nextLabel,
+                fileName: nextFileName,
+                color: nextColor
+            };
+        }
+
+        nextItems[itemIndex] = nextItem;
+
+        const nextConfig = normalizeLoaderConfig({
+            ...currentConfig,
+            items: nextItems,
+            customAssets: {}
+        });
+
+        await saveLoaderConfig(nextConfig);
+
+        if (nextFile && currentItem.fileName && currentItem.fileName !== nextItem.fileName) {
+            const stillUsed = nextItems.some((item, index) => (
+                index !== itemIndex &&
+                String(item.fileName || "").toLowerCase() === String(currentItem.fileName || "").toLowerCase()
+            ));
+
+            if (!stillUsed) {
+                await deleteLoaderSvgFile(projectRootHandle, currentItem.fileName);
+            }
+        }
+
+        showToast("Loader logo updated");
+        editingLoaderItemKey = null;
+        refreshLoaderPanels();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to update loader logo", "error");
+    }
+}
+
+async function deleteLoaderItem(domKey) {
+    const currentConfig = getCurrentLoaderConfig();
+    const itemIndex = getLoaderItemIndexByDomKey(currentConfig, domKey);
+    if (itemIndex < 0) return;
+
+    if (currentConfig.items.length <= 1) {
+        showToast("At least one loader logo is required", "error");
+        return;
+    }
+
+    try {
+        const isConnected = await ensureLoaderProjectConnected();
+        if (!isConnected) {
+            return;
+        }
+
+        const removedItem = currentConfig.items[itemIndex];
+        const nextItems = currentConfig.items.filter((_, index) => index !== itemIndex);
+        const stillUsed = nextItems.some(item => String(item.fileName || "").toLowerCase() === String(removedItem.fileName || "").toLowerCase());
+        if (!stillUsed) {
+            await deleteLoaderSvgFile(projectRootHandle, removedItem.fileName);
+        }
+
+        const nextConfig = normalizeLoaderConfig({
+            ...currentConfig,
+            items: nextItems,
+            customAssets: {}
+        });
+
+        await saveLoaderConfig(nextConfig);
+        showToast("Loader logo deleted");
+        editingLoaderItemKey = null;
+        refreshLoaderPanels();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to delete loader logo", "error");
+    }
+}
+
+async function saveLoaderConfig(config) {
+    const nextConfig = normalizeLoaderConfig(config);
+    loaderConfigState = nextConfig;
+    setLoaderBaseConfig(nextConfig);
+
+    const isConnected = await ensureLoaderProjectConnected();
+    if (!isConnected) {
+        throw new Error("Local project connection is required to save loader changes");
+    }
+
+    await writeLoaderConfigToProject(projectRootHandle, nextConfig);
+}
+
+function slugifyLoaderAssetName(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || `loader-${Date.now()}`;
+}
+
+function normalizeHexColor(value, fallback) {
+    const raw = String(value || "").trim();
+    return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
+}
+
+function matchCategoryRow(query, row, fallbackId) {
+    if (row?.id !== undefined && row?.id !== null && row.id !== "") {
+        return query.eq("id", row.id);
+    }
+
+    return query.eq("category_name", row?.category_name || fallbackId);
 }
 
 async function saveHeroSlide(event) {
@@ -871,6 +1682,98 @@ function normalizeSectionFileName(file, sectionLabel = "Section", folder = "Abou
 
 function sameText(first, second) {
     return String(first || "").trim().toLowerCase() === String(second || "").trim().toLowerCase();
+}
+
+function getAppConfigLogoFileName(configRow) {
+    return getFirstAppConfigFileName(configRow?.Logo ?? configRow?.logo ?? null);
+}
+
+function normalizeLogoValue(value) {
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (typeof value === "string") {
+        const raw = value.trim();
+        if (!raw) return [];
+
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+            return [raw];
+        }
+    }
+
+    if (typeof value === "object") {
+        return [value];
+    }
+
+    return [];
+}
+
+function setAppConfigLogoValue(payload, sourceConfig, value) {
+    const logoKey = Object.prototype.hasOwnProperty.call(sourceConfig || {}, "logo")
+        ? "logo"
+        : "Logo";
+
+    return {
+        ...payload,
+        [logoKey]: value
+    };
+}
+
+function getAppConfigLoaderFileName(configRow) {
+    return getFirstAppConfigFileName(configRow?.Loader ?? configRow?.loader ?? null);
+}
+
+function getFirstAppConfigFileName(rawValue) {
+    if (!rawValue) return "";
+
+    const items = normalizeLogoValue(rawValue);
+    const firstItem = items[0];
+    if (!firstItem) return "";
+
+    if (typeof firstItem === "string") {
+        return firstItem.trim();
+    }
+
+    return String(firstItem.file_name || firstItem.fileName || firstItem.name || "").trim();
+}
+
+function setAppConfigLoaderValue(payload, sourceConfig, value) {
+    const loaderKey = Object.prototype.hasOwnProperty.call(sourceConfig || {}, "loader")
+        ? "loader"
+        : "Loader";
+
+    return {
+        ...payload,
+        [loaderKey]: value
+    };
+}
+
+async function archiveStorageFile(folder, originalName) {
+    if (!originalName) return "";
+
+    const cleanFolder = String(folder || "").trim().replace(/^\/+|\/+$/g, "");
+    const cleanName = String(originalName || "").trim();
+    if (!cleanFolder || !cleanName) return "";
+
+    for (let index = 0; index <= 50; index += 1) {
+        const archivedName = index === 0 ? `old_${cleanName}` : `old_${index}_${cleanName}`;
+        try {
+            await moveInStorage("Food-Website-Storage", `${cleanFolder}/${cleanName}`, `${cleanFolder}/${archivedName}`);
+            return archivedName;
+        } catch (error) {
+            const message = String(error?.message || "").toLowerCase();
+            if (message.includes("already exists") || message.includes("duplicate")) {
+                continue;
+            }
+            throw error;
+        }
+    }
+
+    throw new Error(`Unable to archive previous file for ${cleanFolder}`);
 }
 
 function getAboutImageUrl(section, fileName) {

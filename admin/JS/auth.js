@@ -7,19 +7,29 @@ export function getPowers() {
 }
 
 export function hasPower(power) {
-    const normalizedPowers = getPowers().map(item => String(item || "").trim().toLowerCase());
+    const normalizedPowers = getNormalizedPowers();
     return ["master_control", "master_controll"].some(code => normalizedPowers.includes(code))
         || normalizedPowers.includes(String(power || "").trim().toLowerCase());
 }
 
 export function hasAnyPower(powerList) {
-    const normalizedPowers = getPowers().map(item => String(item || "").trim().toLowerCase());
+    const normalizedPowers = getNormalizedPowers();
     return ["master_control", "master_controll"].some(code => normalizedPowers.includes(code))
         || powerList.some(p => normalizedPowers.includes(String(p || "").trim().toLowerCase()));
 }
 
+export function hasRole(role) {
+    const currentRole = normalizeRole(getUser()?.role);
+    return currentRole && currentRole === normalizeRole(role);
+}
+
+export function hasAnyRole(roles = []) {
+    const currentRole = normalizeRole(getUser()?.role);
+    return Boolean(currentRole) && roles.some(role => currentRole === normalizeRole(role));
+}
+
 export function isAdmin() {
-    const role = getUser()?.role?.toLowerCase();
+    const role = normalizeRole(getUser()?.role);
 
     return [
         "admin",
@@ -33,4 +43,12 @@ export function isAdmin() {
 export function logout() {
     localStorage.clear();
     window.location.href = "../signin.html";
+}
+
+function getNormalizedPowers() {
+    return getPowers().map(item => String(item || "").trim().toLowerCase());
+}
+
+function normalizeRole(role) {
+    return String(role || "").trim().toLowerCase();
 }

@@ -19,12 +19,17 @@
     border: var(--border);
     padding: 2rem;
     text-align: center;
+    border-radius: 2.4rem;
+    background: var(--surface);
+    backdrop-filter: blur(18px);
+    box-shadow: var(--shadow);
 }
 
 /* ===== FORM ===== */
 .contact form h3 {
     font-size: 2.5rem;
     margin-bottom: 1rem;
+    color: var(--text-strong);
 }
 
 .contact form .box {
@@ -32,7 +37,10 @@
     margin: 0.7rem 0;
     padding: 1.2rem;
     font-size: 1.6rem;
-    border: var(--border);
+    border: 1px solid var(--line-soft);
+    border-radius: 1.6rem;
+    background: var(--surface-strong);
+    color: var(--text-strong);
 }
 
 /* ===== TEXTAREA WRAPPER ===== */
@@ -51,7 +59,7 @@
     bottom: 14px;
     right: 12px;
     font-size: 12px;
-    color: #777;
+    color: var(--text-soft);
     pointer-events: none;
 }
 

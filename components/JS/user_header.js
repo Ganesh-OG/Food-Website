@@ -1,8 +1,11 @@
 import { supabase } from "./config.js";
 import { getCartCount, loadStoredCart } from "./cart_store.js";
 import { canAccessAdmin, clearStoredSession, getStoredPowers, getStoredUser, refreshStoredSession } from "./session.js";
+import { applyTheme, initThemeToggle } from "./theme.js";
 
 let headerPoller = null;
+let mobileCartSliderTimer = null;
+let mobileCartPreviewIndex = 0;
 
 startHeaderInit();
 
@@ -36,14 +39,20 @@ function startHeaderInit() {
 
 async function syncHeaderCartCount() {
     const cartCountEl = document.getElementById("cartCount");
-    if (!cartCountEl) return;
 
     try {
         const cartItems = await loadStoredCart(supabase);
-        cartCountEl.textContent = `(${getCartCount(cartItems)})`;
+        const totalCount = getCartCount(cartItems);
+        if (cartCountEl) {
+            cartCountEl.textContent = `(${totalCount})`;
+        }
+        await syncMobileCartTray(cartItems, totalCount);
     } catch (error) {
         console.error("Header cart sync error:", error);
-        cartCountEl.textContent = "(0)";
+        if (cartCountEl) {
+            cartCountEl.textContent = "(0)";
+        }
+        hideMobileCartTray();
     }
 }
 
@@ -99,10 +108,14 @@ function renderUserProfile(profile, user, powers) {
 
 async function initializeUserInfo() {
     try {
+        applyTheme();
+        initThemeToggle();
+        await syncSiteLogo();
         const userBtn = document.getElementById("user-btn");
         const profile = document.getElementById("profileBox");
         const menuBtn = document.getElementById("menu-btn");
         const navbar = document.querySelector(".navbar");
+        syncMobileNav();
 
         if (userBtn && profile && !userBtn.dataset.bound) {
             userBtn.dataset.bound = "true";
@@ -152,6 +165,180 @@ async function initializeUserInfo() {
     }
 }
 
+async function syncSiteLogo() {
+    const logoImage = document.getElementById("siteLogoImage");
+    if (!logoImage) return;
+
+    try {
+        const { data, error } = await supabase
+            .from("app_config")
+            .select("*")
+            .limit(1)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        const fileName = getConfiguredLogoFileName(data);
+        if (!fileName) return;
+
+        const { data: publicData } = supabase.storage
+            .from("Food-Website-Storage")
+            .getPublicUrl(`Logo/${fileName}`);
+
+        if (publicData?.publicUrl) {
+            logoImage.src = publicData.publicUrl;
+            logoImage.alt = "Site logo";
+        }
+    } catch (error) {
+        console.error("Site logo sync error:", error);
+    }
+}
+
+async function syncMobileCartTray(cartItems, totalCount = getCartCount(cartItems)) {
+    const tray = document.getElementById("mobileCartTray");
+    const countEl = document.getElementById("mobileCartTrayCount");
+    const imagesEl = document.getElementById("mobileCartTrayImages");
+
+    if (!tray || !countEl || !imagesEl) return;
+    if (isCartPage()) {
+        hideMobileCartTray();
+        return;
+    }
+
+    if (!totalCount) {
+        hideMobileCartTray();
+        return;
+    }
+
+    const previewItems = await getMobileCartPreviewItems(cartItems);
+    countEl.textContent = `${totalCount} item${totalCount === 1 ? "" : "s"} in cart`;
+    tray.hidden = false;
+    renderMobileCartPreview(imagesEl, previewItems);
+}
+
+async function getMobileCartPreviewItems(cartItems) {
+    const productIds = Object.keys(cartItems || {}).filter(Boolean);
+    if (!productIds.length) {
+        return [];
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from("products")
+            .select("id, name, image")
+            .in("id", productIds);
+
+        if (error) throw error;
+
+        const productMap = new Map((data || []).map(item => [String(item.id), item]));
+
+        return productIds
+            .map(id => {
+                const product = productMap.get(String(id));
+                if (!product?.image) return null;
+
+                return {
+                    id: String(product.id),
+                    name: product.name || "Cart item",
+                    imageUrl: supabase.storage
+                        .from("Food-Website-Storage")
+                        .getPublicUrl(`Products/${product.image}`).data.publicUrl
+                };
+            })
+            .filter(Boolean)
+            .slice(0, 8);
+    } catch (error) {
+        console.error("Mobile cart preview load error:", error);
+        return [];
+    }
+}
+
+function renderMobileCartPreview(mount, items) {
+    clearMobileCartSlider();
+
+    if (!items.length) {
+        mount.innerHTML = `
+            <span class="mobile-cart-fallback-icon">
+                <i class="fas fa-shopping-bag" aria-hidden="true"></i>
+            </span>
+        `;
+        return;
+    }
+
+    mobileCartPreviewIndex = mobileCartPreviewIndex % items.length;
+    const activeItem = items[mobileCartPreviewIndex];
+
+    mount.innerHTML = items
+        .map((item, index) => `
+            <img
+                src="${escapeHtml(item.imageUrl)}"
+                alt="${escapeHtml(item.name)}"
+                class="mobile-cart-preview-image ${index === mobileCartPreviewIndex ? "is-active" : ""}"
+                loading="lazy"
+            >
+        `)
+        .join("");
+
+    if (items.length > 1) {
+        mobileCartSliderTimer = window.setInterval(() => {
+            mobileCartPreviewIndex = (mobileCartPreviewIndex + 1) % items.length;
+            const previews = mount.querySelectorAll(".mobile-cart-preview-image");
+            previews.forEach((image, index) => {
+                image.classList.toggle("is-active", index === mobileCartPreviewIndex);
+            });
+        }, 1800);
+    }
+
+    if (activeItem?.imageUrl) {
+        mount.dataset.activeId = activeItem.id;
+    }
+}
+
+function hideMobileCartTray() {
+    const tray = document.getElementById("mobileCartTray");
+    const imagesEl = document.getElementById("mobileCartTrayImages");
+    if (tray) {
+        tray.hidden = true;
+    }
+    if (imagesEl) {
+        imagesEl.innerHTML = "";
+    }
+    clearMobileCartSlider();
+}
+
+function clearMobileCartSlider() {
+    if (mobileCartSliderTimer) {
+        window.clearInterval(mobileCartSliderTimer);
+        mobileCartSliderTimer = null;
+    }
+}
+
+function syncMobileNav() {
+    const path = window.location.pathname.split("/").pop() || "index.html";
+    const pageKey = path === "index.html" || path === "home.html"
+        ? "home"
+        : path === "about.html"
+            ? "about"
+            : path === "menu.html"
+                ? "menu"
+                : path === "orders.html"
+                    ? "orders"
+                    : path === "contact.html"
+                        ? "contact"
+                        : path === "profile.html"
+                            ? "profile"
+                            : "";
+
+    document.querySelectorAll("[data-mobile-nav]").forEach(link => {
+        link.classList.toggle("active", link.dataset.mobileNav === pageKey);
+    });
+}
+
+function isCartPage() {
+    const path = window.location.pathname.split("/").pop() || "";
+    return path.toLowerCase() === "cart.html";
+}
+
 function escapeHtml(value) {
     return String(value ?? "")
         .replace(/&/g, "&amp;")
@@ -159,6 +346,45 @@ function escapeHtml(value) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
+}
+
+function getConfiguredLogoFileName(configRow) {
+    const rawValue = configRow?.Logo ?? configRow?.logo ?? null;
+    if (!rawValue) return "";
+
+    const items = normalizeLogoValue(rawValue);
+    const firstItem = items[0];
+    if (!firstItem) return "";
+
+    if (typeof firstItem === "string") {
+        return firstItem.trim();
+    }
+
+    return String(firstItem.file_name || firstItem.fileName || firstItem.name || "").trim();
+}
+
+function normalizeLogoValue(value) {
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (typeof value === "string") {
+        const raw = value.trim();
+        if (!raw) return [];
+
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [parsed];
+        } catch {
+            return [raw];
+        }
+    }
+
+    if (typeof value === "object") {
+        return [value];
+    }
+
+    return [];
 }
 
 window.addEventListener("focus", () => {

@@ -1,5 +1,6 @@
 import { supabase } from "../../components/JS/config.js";
 import { canAccessAdmin, clearStoredSession, refreshStoredSession, hasMasterControlPower } from "../../components/JS/session.js";
+import { applyTheme, initThemeToggle } from "../../components/JS/theme.js";
 
 const USER_MANAGEMENT_POWERS = [
     "user_add",
@@ -10,9 +11,17 @@ const USER_MANAGEMENT_POWERS = [
     "user_add_custom_role",
     "user_add_manager",
     "user_add_sales_staff",
+    "user_edit",
     "password_assist",
     "default_password"
 ];
+
+const DASHBOARD_POWERS = ["sales_dashboard", "dashboard_view"];
+const ORDER_MODULE_POWERS = ["sales_dashboard", "order_complete", "order_cancel", "order_partial_cancel"];
+const MESSAGE_MODULE_POWERS = ["message_view", "message_reply", "message_delete", "message_mark_answered"];
+const PRODUCT_MODULE_POWERS = ["product_view", "product_add", "product_edit", "product_disable_stock", "product_disable_qty"];
+const WALLET_MODULE_POWERS = ["wallet_view", "wallet_add_money"];
+const UPDATE_MODULE_POWERS = ["site_control", "about_edit", "slider_manage", "footer_manage", "category_manage", "loader_manage", "site_logo_manage"];
 
 const NAV_ITEMS = [
     {
@@ -20,35 +29,35 @@ const NAV_ITEMS = [
         label: "Dashboard",
         icon: "fa-chart-line",
         href: "admin.html",
-        anyPowers: ["sales_dashboard"]
+        anyPowers: DASHBOARD_POWERS
     },
     {
         key: "products",
         label: "Products",
         icon: "fa-box-open",
         href: "products.html",
-        anyPowers: ["product_view", "product_add", "product_edit", "product_disable_stock", "product_disable_qty"]
+        anyPowers: PRODUCT_MODULE_POWERS
     },
     {
         key: "orders",
         label: "Orders",
         icon: "fa-receipt",
         href: "orders.html",
-        anyPowers: ["sales_dashboard"]
+        anyPowers: ORDER_MODULE_POWERS
     },
     {
         key: "messages",
         label: "Messages",
         icon: "fa-envelope-open-text",
         href: "messages.html",
-        anyPowers: ["message_view", "message_reply", "message_delete", "message_mark_answered"]
+        anyPowers: MESSAGE_MODULE_POWERS
     },
     {
         key: "wallet",
         label: "Wallet",
         icon: "fa-wallet",
         href: "wallet.html",
-        anyPowers: ["wallet_view", "wallet_add_money"]
+        anyPowers: WALLET_MODULE_POWERS
     },
     {
         key: "users",
@@ -62,7 +71,7 @@ const NAV_ITEMS = [
         label: "Updates",
         icon: "fa-wand-magic-sparkles",
         href: "updates.html",
-        anyPowers: ["site_control", "about_edit", "slider_manage", "footer_manage"]
+        anyPowers: UPDATE_MODULE_POWERS
     }
 ];
 
@@ -76,6 +85,7 @@ export async function renderAdminShell({
     const mount = document.getElementById("adminLayout");
     if (!mount) return null;
 
+    applyTheme();
     const { user, powers } = await refreshStoredSession();
 
     if (!user) {
@@ -113,6 +123,7 @@ export async function renderAdminShell({
         return null;
     }
 
+    const roleDisplayName = await fetchRoleDisplayName(user?.role);
     const nav = availableNav.map(item => `
         <a href="${item.href}" class="${item.key === activePage ? "active" : ""}">
             <i class="fa-solid ${item.icon}" aria-hidden="true"></i>
@@ -123,19 +134,22 @@ export async function renderAdminShell({
     mount.innerHTML = `
         <div class="admin-shell">
             <aside class="admin-sidebar">
-                <a class="admin-mark" href="./select-mode.html" aria-label="Admin home">
-                    <span class="admin-mark-icon"><i class="fa-solid fa-utensils" aria-hidden="true"></i></span>
-                    <span class="admin-mark-copy">
-                        <strong>Admin</strong>
-                        <span>${escapeHtml(title)}</span>
-                    </span>
-                </a>
+                <div class="admin-mobile-head">
+                    <a class="admin-mark" href="./select-mode.html" aria-label="Admin home">
+                        <span class="admin-mark-icon"><i class="fa-solid fa-utensils" aria-hidden="true"></i></span>
+                        <span class="admin-mark-copy">
+                            <strong>Admin</strong>
+                            <span>${escapeHtml(title)}</span>
+                        </span>
+                    </a>
+                    <div class="admin-mobile-user-slot" id="adminMobileUserSlot"></div>
+                </div>
 
                 <nav class="admin-nav" id="adminSidebarNav">${nav}</nav>
             </aside>
 
             <main class="admin-main">
-                <div class="admin-topbar">
+                <div class="admin-topbar" id="adminTopbar">
                     <div class="admin-topbar-left">
                         <div class="page-header">
                             <div>
@@ -147,6 +161,7 @@ export async function renderAdminShell({
                     </div>
 
                     <div class="admin-user-panel">
+                        <button class="theme-toggle admin-theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme"></button>
                         <button class="admin-user-trigger" type="button" id="adminUserMenuToggle" aria-expanded="false" aria-controls="adminUserMenu">
                             <span class="admin-user-avatar" aria-hidden="true">
                                 <i class="fa-solid fa-user"></i>
@@ -158,7 +173,7 @@ export async function renderAdminShell({
 
                         <div class="admin-user-menu" id="adminUserMenu" hidden>
                             <div class="admin-user-copy">
-                                <strong>${escapeHtml(user.name || user.id || "Admin")}</strong>
+                                <strong>${escapeHtml(roleDisplayName || user.name || user.id || "Admin")}</strong>
                                 <span>${escapeHtml(user.email || "")}</span>
                                 <small>${escapeHtml(user.role || "Admin")} • ${powers.length} active powers</small>
                             </div>
@@ -190,6 +205,7 @@ export async function renderAdminShell({
         </div>
     `;
 
+    initThemeToggle();
     document.getElementById("adminLogoutBtn")?.addEventListener("click", () => {
         clearStoredSession();
         window.location.href = "../signin.html";
@@ -198,6 +214,8 @@ export async function renderAdminShell({
     const userMenuToggle = document.getElementById("adminUserMenuToggle");
     const userMenu = document.getElementById("adminUserMenu");
     const userPanel = userMenuToggle?.closest(".admin-user-panel");
+    syncAdminUserPanelPlacement();
+    window.addEventListener("resize", syncAdminUserPanelPlacement);
 
     if (userMenuToggle && userMenu && userPanel) {
         const setOpen = (isOpen) => {
@@ -234,6 +252,47 @@ export async function renderAdminShell({
             return hasMasterControl(powers) || codes.some(code => powers.includes(String(code || "").trim().toLowerCase()));
         }
     };
+}
+
+function syncAdminUserPanelPlacement() {
+    const userPanel = document.querySelector(".admin-user-panel");
+    const mobileSlot = document.getElementById("adminMobileUserSlot");
+    const topbar = document.getElementById("adminTopbar");
+
+    if (!userPanel || !mobileSlot || !topbar) return;
+
+    if (window.innerWidth <= 640) {
+        if (userPanel.parentElement !== mobileSlot) {
+            mobileSlot.appendChild(userPanel);
+        }
+        return;
+    }
+
+    if (userPanel.parentElement !== topbar) {
+        topbar.appendChild(userPanel);
+    }
+}
+
+async function fetchRoleDisplayName(roleName) {
+    if (!roleName) return "";
+
+    try {
+        const { data, error } = await supabase
+            .from("roles")
+            .select("display_name")
+            .ilike("role_name", String(roleName).trim())
+            .maybeSingle();
+
+        if (error) {
+            console.error("Role display name lookup failed:", error);
+            return "";
+        }
+
+        return String(data?.display_name || "").trim();
+    } catch (error) {
+        console.error("Role display name lookup failed:", error);
+        return "";
+    }
 }
 
 function getAvailableNavItems(powers) {
@@ -453,6 +512,30 @@ export function slugify(value) {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");
+}
+
+export async function askForTextDecision({
+    title = "Confirm Action",
+    message = "",
+    confirmLabel = "Confirm",
+    promptLabel = "Reason",
+    placeholder = "",
+    required = false
+} = {}) {
+    const confirmed = window.confirm(`${title}\n\n${message}`);
+    if (!confirmed) {
+        return { confirmed: false, value: "" };
+    }
+
+    const response = window.prompt(`${promptLabel}${required ? " (required)" : " (optional)"}`, placeholder) ?? "";
+    const value = String(response).trim();
+
+    if (required && !value) {
+        showToast("A reason is required for this action", "error");
+        return { confirmed: false, value: "" };
+    }
+
+    return { confirmed: true, value };
 }
 
 export { supabase };

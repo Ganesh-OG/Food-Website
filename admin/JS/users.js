@@ -4,7 +4,8 @@ const USER_COLUMNS = ["id", "name", "email", "dob", "balance", "department", "us
 const POWER_USER_ADD = "user_add";
 const POWER_USER_BULK = "user_bulk_additon";
 const POWER_USER_BULK_ALIAS = "user_bulk_add";
-const POWER_USER_EDIT = "password_assist";
+const POWER_USER_EDIT = "user_edit";
+const POWER_USER_EDIT_ALIAS = "password_assist";
 const POWER_DEFAULT_PASSWORD = "default_password";
 const ROLE_SCOPED_ADD_POWERS = {
     admin: "user_add_admin",
@@ -19,6 +20,7 @@ const USER_ACCESS_POWERS = [
     POWER_USER_BULK_ALIAS,
     ...Object.values(ROLE_SCOPED_ADD_POWERS),
     POWER_USER_EDIT,
+    POWER_USER_EDIT_ALIAS,
     POWER_DEFAULT_PASSWORD
 ];
 
@@ -31,6 +33,7 @@ let userEditResult = null;
 let bulkEditableUsers = [];
 let bulkEditLookupRows = [];
 let sheetModulePromise = null;
+let userIdSeed = null;
 
 let canAddSingleUser = false;
 let canBulkAddUsers = false;
@@ -54,7 +57,7 @@ async function initUsersModule() {
 
     canAddSingleUser = hasPower(POWER_USER_ADD) || hasAnyRoleScopedAddPower();
     canBulkAddUsers = hasPower(POWER_USER_BULK) || hasPower(POWER_USER_BULK_ALIAS) || hasAnyRoleScopedAddPower();
-    canEditUsers = hasPower(POWER_USER_EDIT);
+    canEditUsers = hasPower(POWER_USER_EDIT) || hasPower(POWER_USER_EDIT_ALIAS);
     canManageDefaultPasswords = hasPower(POWER_DEFAULT_PASSWORD);
 
     await loadRolesAndDefaultPasswords();
@@ -176,7 +179,7 @@ function renderUserFields(prefix) {
     return `
         <label>
             <span>ID</span>
-            <input type="text" id="${prefix}UserId" placeholder="Enter user ID" required>
+            <input type="text" id="${prefix}UserId" placeholder="Auto generated user ID" required readonly>
         </label>
         <label>
             <span>Name</span>
@@ -258,7 +261,11 @@ function bindSingleUserForm() {
     if (!form || !resetButton) return;
 
     form.addEventListener("submit", submitSingleUser);
-    resetButton.addEventListener("click", () => form.reset());
+    resetButton.addEventListener("click", async () => {
+        form.reset();
+        await initializeSingleUserId();
+    });
+    initializeSingleUserId();
 }
 
 async function submitSingleUser(event) {
@@ -279,6 +286,8 @@ async function submitSingleUser(event) {
 
     showToast(`User ${prepared.payload.id} created`);
     event.currentTarget.reset();
+    bumpUserIdSeed(prepared.payload.id);
+    await initializeSingleUserId();
 }
 
 function bindBulkUpload() {
@@ -815,6 +824,7 @@ function renderBulkEditResults() {
                             <th>Department</th>
                             <th>User Type</th>
                             <th>Role</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -842,6 +852,12 @@ function renderBulkEditResults() {
                                             ${roleChoices.map(role => `<option value="${escapeHtml(role)}" ${sameText(role, user.role) ? "selected" : ""}>${escapeHtml(role)}</option>`).join("")}
                                         </select>
                                     </td>
+                                    <td>
+                                        <div class="compact-actions users-row-actions">
+                                            ${canManageDefaultPasswords ? `<button class="btn-secondary users-inline-button" type="button" data-bulk-default-password="${escapeHtml(user.lookup_id)}">Default Password</button>` : ""}
+                                            <button class="btn-danger users-inline-button" type="button" data-bulk-delete-user="${escapeHtml(user.lookup_id)}">Delete</button>
+                                        </div>
+                                    </td>
                                 </tr>
                             `;
                         }).join("")}
@@ -850,6 +866,22 @@ function renderBulkEditResults() {
             </div>
         ` : ""}
     `;
+
+    mount.querySelectorAll("[data-bulk-default-password]").forEach(button => {
+        button.addEventListener("click", async () => {
+            const user = bulkEditableUsers.find(item => sameText(item.lookup_id, button.dataset.bulkDefaultPassword));
+            if (!user) return;
+            await setUserDefaultPassword(user);
+        });
+    });
+
+    mount.querySelectorAll("[data-bulk-delete-user]").forEach(button => {
+        button.addEventListener("click", async () => {
+            const user = bulkEditableUsers.find(item => sameText(item.lookup_id, button.dataset.bulkDeleteUser));
+            if (!user) return;
+            await deleteBulkEditableUser(user);
+        });
+    });
 }
 
 async function saveBulkEditedUsers() {
@@ -1221,9 +1253,9 @@ async function setUserDefaultPassword(user) {
     showToast("Default password applied");
 }
 
-async function deleteUserAccount(user) {
+async function deleteUserAccount(user, options = {}) {
     const confirmed = window.confirm(`Delete user ${user.name || user.id}? This cannot be undone.`);
-    if (!confirmed) return;
+    if (!confirmed) return false;
 
     const { error } = await supabase
         .from("users")
@@ -1232,12 +1264,72 @@ async function deleteUserAccount(user) {
 
     if (error) {
         showToast(error.message || "Unable to delete user", "error");
-        return;
+        return false;
     }
 
-    userEditResult = null;
-    renderUserEdit();
+    if (!options.preserveEditor) {
+        userEditResult = null;
+        renderUserEdit();
+    }
     showToast("User deleted");
+    return true;
+}
+
+async function deleteBulkEditableUser(user) {
+    const deleted = await deleteUserAccount(user, { preserveEditor: true });
+    if (!deleted) return;
+
+    bulkEditableUsers = bulkEditableUsers.filter(item => !sameText(item.lookup_id, user.lookup_id));
+    bulkEditLookupRows = bulkEditLookupRows.map(row => {
+        if (!row.user || !sameText(row.user.id, user.lookup_id)) return row;
+        return {
+            ...row,
+            status: "Deleted",
+            reason: `Deleted ${user.lookup_id}`,
+            user: null
+        };
+    });
+
+    renderBulkEditResults();
+}
+
+async function initializeSingleUserId() {
+    const input = document.getElementById("singleUserId");
+    if (!input) return;
+
+    const nextId = await generateNextUserId();
+    input.value = nextId;
+}
+
+async function generateNextUserId() {
+    if (!userIdSeed) {
+        const { data, error } = await supabase
+            .from("users")
+            .select("id")
+            .order("id", { ascending: false })
+            .limit(250);
+
+        if (error) {
+            showToast(error.message || "Unable to generate a user ID", "error");
+            return "USR001";
+        }
+
+        userIdSeed = (data || []).reduce((best, row) => {
+            const current = extractUserIdSeed(row.id);
+            return current > best ? current : best;
+        }, 0);
+    }
+
+    return `USR${String(userIdSeed + 1).padStart(3, "0")}`;
+}
+
+function bumpUserIdSeed(userId) {
+    userIdSeed = Math.max(Number(userIdSeed || 0), extractUserIdSeed(userId));
+}
+
+function extractUserIdSeed(userId) {
+    const match = String(userId || "").trim().match(/(\d+)(?!.*\d)/);
+    return match ? Number(match[1]) : 0;
 }
 
 async function getRoleDefaultPassword(roleName) {

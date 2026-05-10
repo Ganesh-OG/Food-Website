@@ -57,21 +57,6 @@ async function updateHeaderFromDB() {
     if (el) el.textContent = `(${total})`;
 }
 
-// ================= CART BAR =================
-function showCartBar() {
-
-    const bar = document.getElementById("cartBar");
-    if (!bar) return;
-
-    bar.classList.add("show");
-
-    let total = 0;
-    Object.values(cartData).forEach(q => total += q);
-
-    document.getElementById("cartText").textContent =
-        `${total} item${total > 1 ? "s" : ""} added`;
-}
-
 // ================= TOAST =================
 function showToast(message) {
 
@@ -438,7 +423,7 @@ function attachCartLogic(card, product) {
 
         await updateCartDB();
         await updateHeaderFromDB();
-        showCartBar();
+        document.dispatchEvent(new Event("cart:updated"));
 
         // TOAST
         if (actionType === "add" || actionType === "inc") {

@@ -2,7 +2,7 @@
    <section class="flex">
 
       <a href="index.html" class="logo">
-         <img src="images/ngplogo.jpg" style="width:50px;height:50px;">
+         <img id="siteLogoImage" src="images/ngplogo.jpg" alt="Site logo" style="width:50px;height:50px;">
       </a>
 
       <nav class="navbar">
@@ -14,7 +14,8 @@
       </nav>
 
       <div class="icons">
-         <a href="cart.html">
+         <button class="theme-toggle user-theme-toggle" type="button" data-theme-toggle aria-label="Toggle theme"></button>
+         <a href="cart.html" class="header-cart-link">
             <i class="fas fa-shopping-cart"></i>
             <span id="cartCount">(0)</span>
          </a>
@@ -28,3 +29,31 @@
 
    </section>
 </header>
+
+<nav class="mobile-bottom-nav" aria-label="Mobile navigation">
+   <a href="index.html" data-mobile-nav="home">
+      <i class="fas fa-house"></i>
+      <span>Home</span>
+   </a>
+   <a href="menu.html" data-mobile-nav="menu">
+      <i class="fas fa-utensils"></i>
+      <span>Menu</span>
+   </a>
+   <a href="orders.html" data-mobile-nav="orders">
+      <i class="fas fa-receipt"></i>
+      <span>Orders</span>
+   </a>
+   <a href="contact.html" data-mobile-nav="contact">
+      <i class="fas fa-envelope"></i>
+      <span>Contact</span>
+   </a>
+</nav>
+
+<a href="cart.html" class="mobile-cart-tray" id="mobileCartTray" hidden>
+   <div class="mobile-cart-tray-images" id="mobileCartTrayImages" aria-hidden="true"></div>
+   <div class="mobile-cart-tray-copy">
+      <strong id="mobileCartTrayCount">0 items</strong>
+      <span id="mobileCartTrayHint">Tap to open cart</span>
+   </div>
+   <span class="mobile-cart-tray-action">View</span>
+</a>

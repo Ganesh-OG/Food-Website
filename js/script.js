@@ -1,4 +1,9 @@
-import { supabase } from "../components/JS/config.js";
+import {
+    buildOrbitLoaderMarkup,
+    ensureOrbitLoaderStyles,
+    normalizeLoaderConfig,
+    setLoaderBaseConfig
+} from "../components/JS/loader_config.js";
 
 // ================= INIT =================
 document.addEventListener("DOMContentLoaded", async () => {
@@ -10,6 +15,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ================= LOADER SETUP =================
 async function setupLoader() {
     let loaderEl = document.querySelector(".loader");
+    const activeTheme = document.body?.dataset.theme || document.documentElement?.dataset.theme || "light";
+    const loaderBackdrop = activeTheme === "dark" ? "#111111" : "#ffffff";
+
+    try {
+        const baseConfigResponse = await fetch("./components/config/loader-config.json", { cache: "no-store" });
+        if (baseConfigResponse.ok) {
+            setLoaderBaseConfig(await baseConfigResponse.json());
+        }
+    } catch (error) {
+        console.warn("⚠️ Could not load loader-config.json, using emergency fallback", error);
+    }
 
     // ✅ Create loader if not present
     if (!loaderEl) {
@@ -28,100 +44,15 @@ async function setupLoader() {
         left: "0",
         width: "100%",
         height: "100%",
-        background: "#ffffff",
+        background: loaderBackdrop,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         zIndex: "9999"
     });
 
-    // ✅ Default fallback UI
-    loaderEl.innerHTML = `
-    <div style="
-        display:flex;
-        flex-direction:column;
-        align-items:center;
-        justify-content:center;
-        gap:20px;
-    ">
-        <div style="
-            width:220px;
-            height:220px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-        ">
-            <img src="images/loader.gif" style="
-                width:100%;
-                height:100%;
-                object-fit:contain;
-            ">
-        </div>
-
-        <p style="
-            font-size:16px;
-            color:#444;
-            font-weight:500;
-        ">
-        </p>
-    </div>
-`;
-
-    try {
-        console.log("📡 Fetching loader config from DB...");
-
-        const { data, error } = await supabase
-            .from("loader")
-            .select("*")
-            .limit(1); // ✅ FIXED (removed .single())
-
-        if (error) {
-            console.error("❌ Supabase error:", error);
-            throw error;
-        }
-
-        console.log("✅ Loader DB data:", data);
-
-        const row = data?.[0];
-
-        if (row && row.Header) {
-            const fileName = row.Header.replace(/\n/g, "").trim();
-            console.log("📂 Clean file name:", fileName);
-
-            const filePath = `Loader/${fileName}`;
-            console.log("📁 Storage path:", filePath);
-
-            const { data: file } = supabase
-                .storage
-                .from("Food-Website-Storage")
-                .getPublicUrl(filePath);
-
-            const url = file.publicUrl;
-            console.log("🌐 Public URL:", url);
-
-            // ================= FILE TYPE =================
-            if (fileName.match(/\.(mp4|webm|ogg)$/i)) {
-                console.log("🎥 VIDEO loader detected");
-
-                loaderEl.innerHTML = `
-                    <video autoplay muted loop playsinline style="width:120px">
-                        <source src="${url}">
-                    </video>
-                `;
-            } else {
-                console.log("🖼️ IMAGE/GIF loader detected");
-
-                loaderEl.innerHTML = `
-                    <img src="${url}" style="width:90px;">
-                `;
-            }
-        } else {
-            console.warn("⚠️ No loader data → fallback used");
-        }
-
-    } catch (err) {
-        console.error("🔥 Loader setup failed → fallback continues:", err);
-    }
+    ensureOrbitLoaderStyles();
+    renderOrbitLoader(loaderEl, normalizeLoaderConfig(null));
 
     // ================= AUTO HIDE (IMPORTANT FIX) =================
 
@@ -136,6 +67,10 @@ async function setupLoader() {
         console.log("⏱️ Max wait reached → forcing loader hide");
         hideLoader(loaderEl);
     }, 2500);
+}
+
+function renderOrbitLoader(loaderEl, config) {
+    loaderEl.innerHTML = buildOrbitLoaderMarkup(config, { assetBasePath: "" });
 }
 
 

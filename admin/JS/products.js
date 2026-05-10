@@ -12,6 +12,7 @@ import {
 } from "./common.js";
 
 let products = [];
+let categoryOptions = [];
 let editingId = null;
 let mobileEditingId = null;
 let existingImageName = null;
@@ -59,7 +60,9 @@ async function initProducts() {
                     </label>
                     <label>
                         <span>Category</span>
-                        <input type="text" id="productCategory" placeholder="Enter category" required>
+                        <select id="productCategory" required>
+                            <option value="">Select category</option>
+                        </select>
                     </label>
                     <label ${canControlStockVisibility ? "" : "hidden"}>
                         <span>Status</span>
@@ -158,17 +161,35 @@ async function initProducts() {
 }
 
 async function loadProducts() {
-    const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("name");
+    const [{ data: productData, error: productError }, { data: categoryData, error: categoryError }] = await Promise.all([
+        supabase
+            .from("products")
+            .select("*")
+            .order("name"),
+        supabase
+            .from("category")
+            .select("category_name, status")
+            .order("category_name")
+    ]);
 
-    if (error) {
-        showToast(error.message || "Unable to load products", "error");
+    if (productError) {
+        showToast(productError.message || "Unable to load products", "error");
         return;
     }
 
-    products = data || [];
+    if (categoryError) {
+        showToast(categoryError.message || "Unable to load categories", "error");
+        return;
+    }
+
+    products = productData || [];
+    categoryOptions = (categoryData || [])
+        .map(row => String(row.category_name || "").trim())
+        .filter(Boolean)
+        .filter((value, index, list) => list.indexOf(value) === index)
+        .sort((a, b) => a.localeCompare(b));
+
+    populateProductCategorySelect();
     populateCategoryFilter();
     if (!editingId) {
         setNextProductId();
@@ -261,7 +282,7 @@ function fillEditForm(id) {
     document.getElementById("productName").value = product.name || "";
     document.getElementById("productPrice").value = product.price ?? "";
     document.getElementById("productStock").value = product.stock ?? "";
-    document.getElementById("productCategory").value = product.category || "";
+    populateProductCategorySelect(product.category || "");
     document.getElementById("productStatus").value = product.Status || "enabled";
     document.getElementById("stockStatus").value = product.Stock_qty_Status || "show";
     syncRestrictedProductControls();
@@ -286,6 +307,7 @@ function resetForm() {
     document.getElementById("productForm").reset();
     document.getElementById("productStatus").value = "enabled";
     document.getElementById("stockStatus").value = "show";
+    populateProductCategorySelect();
     syncRestrictedProductControls();
     setNextProductId();
     clearPreviewUrl();
@@ -338,6 +360,11 @@ async function saveProductRecord({
     let imageName = removeOriginalImage ? null : originalImageName;
 
     try {
+        if (!isManagedCategory(category)) {
+            showToast("Choose a category from Category Manage", "error");
+            return;
+        }
+
         if (!canControlQtyVisibility && String(stockStatus || "").toLowerCase() !== "show") {
             showToast("You don't have access to disable stock quantity", "error");
             syncRestrictedProductControls();
@@ -421,11 +448,11 @@ function populateCategoryFilter() {
     if (!select) return;
 
     const currentValue = select.value;
-    const categories = [...new Set(
-        products
-            .map(product => String(product.category || "").trim())
-            .filter(Boolean)
-    )].sort((a, b) => a.localeCompare(b));
+    const productCategories = products
+        .map(product => String(product.category || "").trim())
+        .filter(Boolean);
+    const categories = [...new Set([...categoryOptions, ...productCategories])]
+        .sort((a, b) => a.localeCompare(b));
 
     select.innerHTML = `
         <option value="">All Categories</option>
@@ -633,7 +660,9 @@ function getMobileInlineDesktopEditor(product) {
                         </label>
                         <label>
                             <span>Category</span>
-                            <input type="text" name="category" value="${escapeHtml(product.category || "")}" required>
+                            <select name="category" required>
+                                ${getCategoryOptionsMarkup(product.category || "")}
+                            </select>
                         </label>
                         <label ${canControlStockVisibility ? "" : "hidden"}>
                             <span>Status</span>
@@ -768,4 +797,41 @@ function clearMobilePreviewUrl() {
         URL.revokeObjectURL(mobilePreviewUrl);
         mobilePreviewUrl = null;
     }
+}
+
+function populateProductCategorySelect(selectedValue = "") {
+    const select = document.getElementById("productCategory");
+    if (!select) return;
+
+    select.innerHTML = getCategoryOptionsMarkup(selectedValue, true);
+    select.value = getManagedCategoryValue(selectedValue);
+}
+
+function getCategoryOptionsMarkup(selectedValue = "", includePlaceholder = false) {
+    const options = [...categoryOptions];
+    const normalizedSelected = String(selectedValue || "").trim();
+
+    if (normalizedSelected && !options.includes(normalizedSelected)) {
+        options.push(normalizedSelected);
+        options.sort((a, b) => a.localeCompare(b));
+    }
+
+    return `
+        ${includePlaceholder ? `<option value="">Select category</option>` : ""}
+        ${options.map(category => `
+            <option value="${escapeHtml(category)}" ${category === normalizedSelected ? "selected" : ""}>${escapeHtml(category)}</option>
+        `).join("")}
+    `;
+}
+
+function getManagedCategoryValue(value) {
+    const normalized = String(value || "").trim();
+    if (normalized && categoryOptions.includes(normalized)) {
+        return normalized;
+    }
+    return normalized || "";
+}
+
+function isManagedCategory(value) {
+    return categoryOptions.includes(String(value || "").trim());
 }
