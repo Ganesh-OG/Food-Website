@@ -15,11 +15,10 @@ async function loadHeader() {
 
     console.log("✅ Header injected");
 
-    // 🔥 Trigger event AFTER header is fully inserted
-    document.dispatchEvent(new Event("headerLoaded"));
-
   } catch (err) {
     console.error("❌ Header load error:", err);
+  } finally {
+    document.dispatchEvent(new Event("header:ready"));
   }
 }
 
@@ -35,5 +34,7 @@ async function loadFooter() {
 
   } catch (err) {
     console.error("❌ Footer load error:", err);
+  } finally {
+    document.dispatchEvent(new Event("footer:ready"));
   }
 }

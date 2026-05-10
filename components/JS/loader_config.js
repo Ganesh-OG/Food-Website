@@ -6,6 +6,8 @@ const EMERGENCY_FALLBACK_ITEM = {
     source: "local"
 };
 
+export const LOADER_STORAGE_KEY = "food_website_loader_config";
+
 let loaderBaseConfig = {
     mode: "code-orbit-loader",
     version: 1,
@@ -174,6 +176,27 @@ export function hasStructuredLoaderConfig(rawValue) {
     return Boolean(parsed && typeof parsed === "object" && Array.isArray(parsed.items));
 }
 
+export function readStoredLoaderConfig() {
+    try {
+        const rawValue = window.localStorage.getItem(LOADER_STORAGE_KEY);
+        return hasStructuredLoaderConfig(rawValue) ? normalizeLoaderConfig(rawValue) : null;
+    } catch {
+        return null;
+    }
+}
+
+export function writeStoredLoaderConfig(config) {
+    const nextConfig = normalizeLoaderConfig(config);
+
+    try {
+        window.localStorage.setItem(LOADER_STORAGE_KEY, JSON.stringify(nextConfig));
+    } catch {
+        // Ignore storage write failures and keep runtime config usable.
+    }
+
+    return nextConfig;
+}
+
 export function normalizeLoaderConfig(rawValue) {
     const parsed = parseMaybeJson(rawValue);
     const defaults = getDefaultLoaderConfig();
@@ -243,6 +266,17 @@ function buildColorKeyframes(name, items) {
 
 function buildLogoKeyframes(name, itemCount) {
     const count = Math.max(1, itemCount);
+    if (count === 1) {
+        return `
+            @keyframes ${name}{
+                0%, 100%{
+                    opacity:1;
+                    transform:scale(1);
+                }
+            }
+        `;
+    }
+
     const visibleEnd = Number(Math.min(96, (100 / count) * 0.8).toFixed(4));
     return `
         @keyframes ${name}{

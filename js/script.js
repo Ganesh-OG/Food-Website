@@ -17,6 +17,9 @@ async function setupLoader() {
     let loaderEl = document.querySelector(".loader");
     const activeTheme = document.body?.dataset.theme || document.documentElement?.dataset.theme || "light";
     const loaderBackdrop = activeTheme === "dark" ? "#111111" : "#ffffff";
+    const pageReadyPromise = waitForCriticalPageReadiness();
+    const windowLoadedPromise = waitForWindowLoad();
+    let loaderConfig = normalizeLoaderConfig(null);
 
     try {
         const baseConfigResponse = await fetch("./components/config/loader-config.json", { cache: "no-store" });
@@ -26,6 +29,9 @@ async function setupLoader() {
     } catch (error) {
         console.warn("⚠️ Could not load loader-config.json, using emergency fallback", error);
     }
+
+    loaderConfig = normalizeLoaderConfig(null);
+    const minimumLoaderTimePromise = waitMinimumLoaderLoop(loaderConfig);
 
     // ✅ Create loader if not present
     if (!loaderEl) {
@@ -52,25 +58,95 @@ async function setupLoader() {
     });
 
     ensureOrbitLoaderStyles();
-    renderOrbitLoader(loaderEl, normalizeLoaderConfig(null));
+    renderOrbitLoader(loaderEl, loaderConfig);
 
-    // ================= AUTO HIDE (IMPORTANT FIX) =================
-
-    // ✅ Hide when page fully loaded
-    window.addEventListener("load", () => {
-        console.log("🌍 Window loaded → hiding loader");
+    // Hide only after one full loader loop and critical page readiness.
+    Promise.all([windowLoadedPromise, pageReadyPromise, minimumLoaderTimePromise]).then(() => {
+        console.log("🌍 Page ready → hiding loader");
         hideLoader(loaderEl);
     });
 
-    // ✅ Safety fallback (prevents infinite loading)
+    // Safety fallback only for unexpected stalls.
     setTimeout(() => {
-        console.log("⏱️ Max wait reached → forcing loader hide");
-        hideLoader(loaderEl);
-    }, 2500);
+        if (loaderEl.style.display !== "none") {
+            console.log("⏱️ Emergency fallback reached → forcing loader hide");
+            hideLoader(loaderEl);
+        }
+    }, 15000);
 }
 
 function renderOrbitLoader(loaderEl, config) {
     loaderEl.innerHTML = buildOrbitLoaderMarkup(config, { assetBasePath: "" });
+}
+
+function waitMinimumLoaderLoop(config) {
+    const cycleSeconds = Number(config?.cycleSeconds);
+    const orbitSeconds = Number(config?.orbitSeconds);
+    const minSeconds = Math.max(
+        Number.isFinite(cycleSeconds) ? cycleSeconds : 0,
+        Number.isFinite(orbitSeconds) ? orbitSeconds : 0,
+        1.5
+    );
+
+    return new Promise(resolve => {
+        window.setTimeout(resolve, Math.ceil(minSeconds * 1000));
+    });
+}
+
+function waitForWindowLoad() {
+    if (document.readyState === "complete") {
+        return Promise.resolve();
+    }
+
+    return new Promise(resolve => {
+        window.addEventListener("load", resolve, { once: true });
+    });
+}
+
+function waitForCriticalPageReadiness() {
+    const requiredEvents = [];
+
+    if (document.getElementById("headerContainer")) {
+        requiredEvents.push("header:ready");
+    }
+
+    if (document.getElementById("footerContainer")) {
+        requiredEvents.push("footer:ready");
+    }
+
+    if (document.getElementById("aboutContent") || document.getElementById("stepsContainer")) {
+        requiredEvents.push("about:ready");
+    }
+
+    if (!requiredEvents.length) {
+        return Promise.resolve();
+    }
+
+    return new Promise(resolve => {
+        const pending = new Set(requiredEvents);
+        const cleanup = [];
+
+        const finish = () => {
+            cleanup.forEach(([eventName, handler]) => {
+                document.removeEventListener(eventName, handler);
+            });
+            resolve();
+        };
+
+        pending.forEach(eventName => {
+            const handler = () => {
+                pending.delete(eventName);
+                if (!pending.size) {
+                    finish();
+                }
+            };
+
+            cleanup.push([eventName, handler]);
+            document.addEventListener(eventName, handler, { once: true });
+        });
+
+        setTimeout(finish, 12000);
+    });
 }
 
 

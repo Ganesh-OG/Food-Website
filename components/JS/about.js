@@ -33,7 +33,8 @@ async function loadAbout() {
             .select("*");
 
         if (error || !data || data.length === 0) {
-            return renderFallback();
+            renderFallback();
+            return;
         }
 
         renderDbContent(data);
@@ -41,6 +42,8 @@ async function loadAbout() {
     } catch (err) {
         console.error("❌ Error loading About:", err);
         renderFallback();
+    } finally {
+        document.dispatchEvent(new Event("about:ready"));
     }
 }
 

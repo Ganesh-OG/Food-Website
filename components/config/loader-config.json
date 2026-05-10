@@ -3,16 +3,40 @@
   "version": 1,
   "source": "local-first",
   "background": "#ffffff",
-  "cycleSeconds": 4.8,
-  "orbitSeconds": 4.5,
+  "cycleSeconds": 3.5,
+  "orbitSeconds": 3.5,
   "centerSize": 88,
   "orbitSize": 53,
   "logoSize": 70,
   "items": [
-    { "key": "burger", "label": "Burger", "fileName": "burger.svg", "color": "#f7a600", "source": "local" },
-    { "key": "cooldrinks", "label": "Cooldrinks", "fileName": "cooldrinks.svg", "color": "#ec4899", "source": "local" },
-    { "key": "coffee", "label": "Coffee", "fileName": "coffee.svg", "color": "#1d4ed8", "source": "local" },
-    { "key": "spageti", "label": "Spageti", "fileName": "Spageti.svg", "color": "#22c55e", "source": "local" }
+    {
+      "key": "burger",
+      "label": "Burger",
+      "fileName": "burger.svg",
+      "color": "#f7a600",
+      "source": "local"
+    },
+    {
+      "key": "cooldrinks",
+      "label": "Cooldrinks",
+      "fileName": "cooldrinks.svg",
+      "color": "#ec4899",
+      "source": "local"
+    },
+    {
+      "key": "coffee",
+      "label": "Coffee",
+      "fileName": "coffee.svg",
+      "color": "#1d4ed8",
+      "source": "local"
+    },
+    {
+      "key": "spageti",
+      "label": "Spageti",
+      "fileName": "Spageti.svg",
+      "color": "#22c55e",
+      "source": "local"
+    }
   ],
   "customAssets": {}
 }

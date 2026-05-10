@@ -2511,6 +2511,19 @@ body::-webkit-scrollbar-thumb:hover,
     background: color-mix(in srgb, var(--admin-accent-soft) 60%, transparent);
 }
 
+.loader-delete-notice {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--admin-border);
+    background: color-mix(in srgb, #ef4444 12%, var(--admin-elevated));
+    color: var(--admin-text);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 @media (max-width: 900px) {
     .loader-preview-card {
         grid-template-columns: 1fr;
@@ -2532,6 +2545,11 @@ body::-webkit-scrollbar-thumb:hover,
     .loader-asset-side-actions {
         width: 100%;
         justify-items: stretch;
+    }
+
+    .loader-delete-notice {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 

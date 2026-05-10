@@ -15,7 +15,6 @@ import {
 import {
     getDefaultLoaderConfig,
     getLoaderImagePath,
-    hasStructuredLoaderConfig,
     normalizeLoaderConfig,
     setLoaderBaseConfig
 } from "../../components/JS/loader_config.js";
@@ -34,21 +33,12 @@ let canManageSlider = false;
 let canEditAbout = false;
 let canManageSiteLogo = false;
 let loaderConfigState = getDefaultLoaderConfig();
-let projectRootHandle = null;
+const LOADER_GITHUB_URL = "https://github.com/Ganesh-OG/Food-Website/tree/main/images/loader";
+let pendingLoaderDeletion = null;
 
 function refreshLoaderPanels() {
     renderLoaderForm();
     renderLoaderList();
-    renderLoaderConnectionState();
-}
-
-function renderLoaderConnectionState() {
-    const mount = document.getElementById("loaderConnectionState");
-    if (!mount) return;
-
-    mount.innerHTML = projectRootHandle
-        ? `<div class="loader-connection-note is-connected">Local project connected. Loader config and SVG files will be updated here.</div>`
-        : `<div class="loader-connection-note">Viewing loader from config. When saving, choose the <code>Final Supabase</code> project root folder that contains <code>admin</code>, <code>components</code>, and <code>images</code>.</div>`;
 }
 
 document.addEventListener("DOMContentLoaded", initUpdates);
@@ -222,27 +212,27 @@ async function initUpdates() {
                 <div class="card updates-panel ${activePanelId === "loaderPanel" ? "active" : ""}" id="loaderPanel" ${canManageLoader && activePanelId === "loaderPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Loader Manage</h3>
-                        <p class="muted">This panel uses the same <code>components/config/loader-config.json</code> that the site loader reads.</p>
-                        <p class="muted">Add, replace, delete, and speed changes update that config and the local <code>images/loader</code> folder directly.</p>
-                        <div id="loaderConnectionState"></div>
-                        <div class="compact-actions">
-                            <button class="btn-secondary" type="button" id="connectLoaderProject">Connect Local Project</button>
+                        <p class="muted">Admin saves loader settings as config, and the website loader uses that config first.</p>
+                        <p class="muted">If an SVG image is missing or needs replacement, update the file manually in GitHub and keep the filename here in sync.</p>
+                        <div class="loader-connection-note">
+                            <a href="${LOADER_GITHUB_URL}" target="_blank" rel="noopener noreferrer">Open GitHub in new tab for manual loader image upload or replace</a>
                         </div>
                     </div>
                     <div class="loader-section-heading">
                         <h4>1. Add New Logo</h4>
-                        <p class="muted">Upload a new SVG logo and choose its initial color.</p>
+                        <p class="muted">Add the label, SVG file name, and color. Upload the SVG manually in GitHub when needed.</p>
                     </div>
                     <form id="loaderAddForm" class="form-grid">
                         <input id="loaderNewLabel" type="text" placeholder="New logo name" required>
+                        <input id="loaderNewFileName" type="text" placeholder="SVG file name like coffee.svg" required>
                         <input id="loaderNewColor" type="color" value="#f7a600">
-                        <input id="loaderNewFile" class="full" type="file" accept=".svg,image/svg+xml" required>
                         <button class="btn full" type="submit">Add New Logo</button>
                     </form>
                     <div class="loader-section-heading">
                         <h4>2. Edit Existing Logos</h4>
-                        <p class="muted">Edit, replace, or delete the logos already used by the loader.</p>
+                        <p class="muted">Edit label, SVG file name, or color. Replace the actual SVG file manually from GitHub if needed.</p>
                     </div>
+                    <div id="loaderDeleteNotice"></div>
                     <div class="list" id="loaderList"></div>
                     <div class="loader-section-heading">
                         <h4>3. Adjust Speed</h4>
@@ -261,6 +251,16 @@ async function initUpdates() {
                         </div>
                         <button class="btn full" type="submit">Save Speed</button>
                     </form>
+                    <div class="loader-section-heading">
+                        <h4>4. Generate Config</h4>
+                        <p class="muted">After finishing all loader edits, copy this JSON and replace <code>components/config/loader-config.json</code> manually in GitHub.</p>
+                    </div>
+                    <div class="loader-json-block">
+                        <textarea id="loaderGeneratedConfig" rows="14" readonly spellcheck="false"></textarea>
+                    </div>
+                    <div class="compact-actions">
+                        <button class="btn-secondary" type="button" id="copyLoaderConfig">Copy Config</button>
+                    </div>
                 </div>
             </section>
         </div>
@@ -273,7 +273,7 @@ async function initUpdates() {
     document.getElementById("categoryForm")?.addEventListener("submit", addCategoryRow);
     document.getElementById("loaderSpeedForm")?.addEventListener("submit", saveLoaderSpeed);
     document.getElementById("loaderAddForm")?.addEventListener("submit", addLoaderLogo);
-    document.getElementById("connectLoaderProject")?.addEventListener("click", connectLoaderProjectFolder);
+    document.getElementById("copyLoaderConfig")?.addEventListener("click", copyLoaderConfigToClipboard);
     bindUpdatePanelMenu();
     initAdminFilePickers(root);
 
@@ -296,6 +296,8 @@ async function loadUpdateData() {
     contactConfigs = contactRes.data || [];
     heroSlides = heroRes.data || [];
     categoryRows = categoryRes.data || [];
+    loaderConfigState = getStoredLoaderConfig(appConfig);
+    setLoaderBaseConfig(loaderConfigState);
 
     renderUpdateForms();
 }
@@ -562,12 +564,13 @@ function renderLoaderList() {
                     ${renderLoaderItemPreview(item)}
                     <div class="loader-logo-fields">
                         <input type="text" name="label" value="${escapeHtml(item.label || "")}" placeholder="Logo name" required>
+                        <input type="text" name="fileName" value="${escapeHtml(item.fileName || "")}" placeholder="SVG file name" required>
                         <input type="color" name="color" value="${escapeHtml(normalizeHexColor(item.color, "#f7a600"))}">
-                        <input type="file" name="file" accept=".svg,image/svg+xml">
-                        <div class="updates-file-meta">Choose a new SVG file only if you want to replace this logo icon.</div>
+                        <div class="updates-file-meta">Keep this filename matched with the SVG you upload manually in GitHub.</div>
                     </div>
                     <div class="compact-actions">
                         <button class="btn-secondary" type="submit">Save</button>
+                        <a class="btn-ghost" href="${LOADER_GITHUB_URL}" target="_blank" rel="noopener noreferrer">Replace Icon</a>
                         <button class="btn-ghost" type="button" data-cancel-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Cancel</button>
                         <button class="btn-danger" type="button" data-delete-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Delete</button>
                     </div>
@@ -618,165 +621,11 @@ function renderLoaderForm() {
     const orbitInput = document.getElementById("loaderOrbitSeconds");
     if (cycleInput) cycleInput.value = String(config.cycleSeconds);
     if (orbitInput) orbitInput.value = String(config.orbitSeconds);
-}
-
-async function connectLoaderProjectFolder() {
-    if (!window.showDirectoryPicker) {
-        showToast("This browser does not support direct folder editing", "error");
-        return false;
+    const generatedConfig = document.getElementById("loaderGeneratedConfig");
+    if (generatedConfig) {
+        generatedConfig.value = JSON.stringify(config, null, 2);
     }
-
-    try {
-        const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-        await ensureLoaderProjectShape(handle);
-        projectRootHandle = handle;
-
-        const configFromDisk = await readLoaderConfigFromProject(handle);
-        loaderConfigState = configFromDisk;
-        showToast("Loader config connected");
-        refreshLoaderPanels();
-        return true;
-    } catch (error) {
-        if (error?.name === "AbortError") return false;
-        console.error(error);
-        showToast(error.message || "Unable to connect project folder", "error");
-        return false;
-    }
-}
-
-async function ensureLoaderProjectConnected() {
-    if (projectRootHandle) {
-        return true;
-    }
-
-    showToast("Connect the local project once to save loader changes");
-    return connectLoaderProjectFolder();
-}
-
-function getLoaderRootFolderError() {
-    return "Choose the Final Supabase project root folder that contains admin, components, and images.";
-}
-
-async function ensureLoaderProjectShape(rootHandle) {
-    const imagesHandle = await rootHandle.getDirectoryHandle("images");
-    await imagesHandle.getDirectoryHandle("loader");
-    const componentsHandle = await rootHandle.getDirectoryHandle("components");
-    const configHandle = await componentsHandle.getDirectoryHandle("config");
-    await configHandle.getFileHandle("loader-config.json");
-}
-
-async function readLoaderConfigFromProject(rootHandle) {
-    const configHandle = await getLoaderConfigFileHandle(rootHandle);
-    const configFile = await configHandle.getFile();
-    const rawConfig = await configFile.text();
-    const parsedConfig = hasStructuredLoaderConfig(rawConfig)
-        ? normalizeLoaderConfig(rawConfig)
-        : getDefaultLoaderConfig();
-
-    const folderFiles = await listLoaderSvgFileNames(rootHandle);
-    const mergedItems = mergeLoaderItemsWithFolder(parsedConfig.items, folderFiles);
-    const nextConfig = normalizeLoaderConfig({
-        ...parsedConfig,
-        items: mergedItems,
-        customAssets: parsedConfig.customAssets || {}
-    });
-
-    setLoaderBaseConfig(nextConfig);
-    return nextConfig;
-}
-
-async function writeLoaderConfigToProject(rootHandle, config) {
-    const configHandle = await getLoaderConfigFileHandle(rootHandle);
-    const writable = await configHandle.createWritable();
-    await writable.write(JSON.stringify(config, null, 2));
-    await writable.close();
-}
-
-async function listLoaderSvgFileNames(rootHandle) {
-    const loaderDirHandle = await getLoaderDirectoryHandle(rootHandle);
-    const names = [];
-
-    for await (const [name, handle] of loaderDirHandle.entries()) {
-        if (handle.kind === "file" && /\.svg$/i.test(name)) {
-            names.push(name);
-        }
-    }
-
-    names.sort((first, second) => first.localeCompare(second, undefined, { sensitivity: "base" }));
-    return names;
-}
-
-async function writeNewLoaderSvgFile(loaderDirectoryHandle, file, label) {
-    const rawBaseName = slugifyLoaderAssetName(label || file.name.replace(/\.svg$/i, ""));
-    let fileName = `${rawBaseName}.svg`;
-    let counter = 2;
-
-    while (await fileExists(loaderDirectoryHandle, fileName)) {
-        fileName = `${rawBaseName}-${counter}.svg`;
-        counter += 1;
-    }
-
-    const fileHandle = await loaderDirectoryHandle.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(await file.text());
-    await writable.close();
-    return fileName;
-}
-
-async function replaceLoaderSvgFile(rootHandle, targetFileName, file) {
-    const loaderDirectoryHandle = await getLoaderDirectoryHandle(rootHandle);
-    const fileHandle = await loaderDirectoryHandle.getFileHandle(targetFileName, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(await file.text());
-    await writable.close();
-}
-
-async function deleteLoaderSvgFile(rootHandle, fileName) {
-    const loaderDirectoryHandle = await getLoaderDirectoryHandle(rootHandle);
-    await loaderDirectoryHandle.removeEntry(fileName);
-}
-
-async function fileExists(directoryHandle, fileName) {
-    try {
-        await directoryHandle.getFileHandle(fileName);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function mergeLoaderItemsWithFolder(items, folderFileNames) {
-    const normalizedItems = Array.isArray(items) ? items.map(item => ({ ...item })) : [];
-    const existingByFileName = new Map(
-        normalizedItems.map(item => [String(item.fileName || "").toLowerCase(), item])
-    );
-
-    folderFileNames.forEach((fileName, index) => {
-        const fileKey = String(fileName || "").toLowerCase();
-        if (existingByFileName.has(fileKey)) return;
-
-        const fallback = getDefaultLoaderConfig().items[index] || getDefaultLoaderConfig().items[0];
-        normalizedItems.push({
-            key: slugifyLoaderAssetName(fileName.replace(/\.svg$/i, "")),
-            source: "local",
-            label: fileName.replace(/\.svg$/i, ""),
-            fileName,
-            color: fallback?.color || "#f7a600"
-        });
-    });
-
-    return normalizedItems.filter(item => folderFileNames.some(fileName => String(fileName).toLowerCase() === String(item.fileName || "").toLowerCase()));
-}
-
-async function getLoaderDirectoryHandle(rootHandle) {
-    const imagesHandle = await rootHandle.getDirectoryHandle("images");
-    return imagesHandle.getDirectoryHandle("loader");
-}
-
-async function getLoaderConfigFileHandle(rootHandle) {
-    const componentsHandle = await rootHandle.getDirectoryHandle("components");
-    const configHandle = await componentsHandle.getDirectoryHandle("config");
-    return configHandle.getFileHandle("loader-config.json");
+    renderPendingLoaderDeletion();
 }
 
 function renderSiteLogoList() {
@@ -1072,32 +921,20 @@ async function addLoaderLogo(event) {
     event.preventDefault();
 
     const labelInput = document.getElementById("loaderNewLabel");
+    const fileNameInput = document.getElementById("loaderNewFileName");
     const colorInput = document.getElementById("loaderNewColor");
-    const fileInput = document.getElementById("loaderNewFile");
-    const file = fileInput?.files?.[0];
+    const fileName = normalizeLoaderFileName(fileNameInput?.value || "");
 
-    if (!file) {
-        showToast("Choose an SVG file first", "error");
-        return;
-    }
-
-    if (!/\.svg$/i.test(file.name)) {
-        showToast("Please choose an SVG file", "error");
+    if (!fileName) {
+        showToast("Enter an SVG file name like coffee.svg", "error");
         return;
     }
 
     try {
-        const isConnected = await ensureLoaderProjectConnected();
-        if (!isConnected) {
-            return;
-        }
-
         const currentConfig = getCurrentLoaderConfig();
-        const loaderDirectoryHandle = await getLoaderDirectoryHandle(projectRootHandle);
-        const label = String(labelInput?.value || file.name.replace(/\.svg$/i, "")).trim() || "Loader Logo";
+        const label = String(labelInput?.value || fileName.replace(/\.svg$/i, "")).trim() || "Loader Logo";
         const key = slugifyLoaderAssetName(label);
         const color = normalizeHexColor(colorInput?.value, "#f7a600");
-        const fileName = await writeNewLoaderSvgFile(loaderDirectoryHandle, file, label);
 
         const nextConfig = normalizeLoaderConfig({
             ...currentConfig,
@@ -1132,37 +969,20 @@ async function saveLoaderItem(event) {
     const currentItem = currentConfig.items[itemIndex];
     const nextItems = currentConfig.items.map(item => ({ ...item }));
     const nextLabel = form.elements.label.value.trim() || currentItem.label || `Logo ${itemIndex + 1}`;
+    const nextFileName = normalizeLoaderFileName(form.elements.fileName.value || currentItem.fileName || "");
     const nextColor = normalizeHexColor(form.elements.color.value, currentItem.color || "#f7a600");
-    const nextFile = form.elements.file.files?.[0];
 
     try {
-        const isConnected = await ensureLoaderProjectConnected();
-        if (!isConnected) {
-            return;
+        if (!nextFileName) {
+            throw new Error("Enter an SVG file name like coffee.svg");
         }
 
-        let nextItem = {
+        const nextItem = {
             ...currentItem,
             label: nextLabel,
+            fileName: nextFileName,
             color: nextColor
         };
-
-        if (nextFile) {
-            if (!/\.svg$/i.test(nextFile.name)) {
-                throw new Error("Please choose an SVG file");
-            }
-
-            const loaderDirectoryHandle = await getLoaderDirectoryHandle(projectRootHandle);
-            const nextFileName = await writeNewLoaderSvgFile(loaderDirectoryHandle, nextFile, nextLabel);
-
-            nextItem = {
-                key: nextItem.key,
-                source: "local",
-                label: nextLabel,
-                fileName: nextFileName,
-                color: nextColor
-            };
-        }
 
         nextItems[itemIndex] = nextItem;
 
@@ -1173,18 +993,6 @@ async function saveLoaderItem(event) {
         });
 
         await saveLoaderConfig(nextConfig);
-
-        if (nextFile && currentItem.fileName && currentItem.fileName !== nextItem.fileName) {
-            const stillUsed = nextItems.some((item, index) => (
-                index !== itemIndex &&
-                String(item.fileName || "").toLowerCase() === String(currentItem.fileName || "").toLowerCase()
-            ));
-
-            if (!stillUsed) {
-                await deleteLoaderSvgFile(projectRootHandle, currentItem.fileName);
-            }
-        }
-
         showToast("Loader logo updated");
         editingLoaderItemKey = null;
         refreshLoaderPanels();
@@ -1204,19 +1012,128 @@ async function deleteLoaderItem(domKey) {
         return;
     }
 
+    queueLoaderDeletion(domKey, currentConfig.items[itemIndex]);
+}
+
+async function saveLoaderConfig(config) {
+    const nextConfig = normalizeLoaderConfig(config);
+    loaderConfigState = nextConfig;
+    setLoaderBaseConfig(nextConfig);
+}
+
+function slugifyLoaderAssetName(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || `loader-${Date.now()}`;
+}
+
+function normalizeHexColor(value, fallback) {
+    const raw = String(value || "").trim();
+    return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
+}
+
+function normalizeLoaderFileName(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    return /\.svg$/i.test(raw) ? raw : `${raw}.svg`;
+}
+
+function getStoredLoaderConfig(configRow) {
+    return normalizeLoaderConfig(loaderConfigState);
+}
+
+async function copyLoaderConfigToClipboard() {
+    const config = JSON.stringify(getCurrentLoaderConfig(), null, 2);
+
     try {
-        const isConnected = await ensureLoaderProjectConnected();
-        if (!isConnected) {
+        if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(config);
+            showToast("Loader config copied");
             return;
         }
+    } catch (error) {
+        console.error(error);
+    }
 
-        const removedItem = currentConfig.items[itemIndex];
+    const generatedConfig = document.getElementById("loaderGeneratedConfig");
+    if (generatedConfig) {
+        generatedConfig.focus();
+        generatedConfig.select();
+    }
+    showToast("Copy the generated loader config manually");
+}
+
+function queueLoaderDeletion(domKey, item) {
+    clearPendingLoaderDeletion(false);
+
+    pendingLoaderDeletion = {
+        domKey,
+        item,
+        expiresAt: Date.now() + 10000,
+        timeoutId: window.setTimeout(() => {
+            finalizeLoaderDeletion(domKey);
+        }, 10000),
+        intervalId: window.setInterval(() => {
+            renderPendingLoaderDeletion();
+        }, 250)
+    };
+
+    renderPendingLoaderDeletion();
+    showToast("Loader logo scheduled for delete. Undo available for 10 seconds.", "error");
+}
+
+function clearPendingLoaderDeletion(shouldRender = true) {
+    if (!pendingLoaderDeletion) return;
+
+    window.clearTimeout(pendingLoaderDeletion.timeoutId);
+    window.clearInterval(pendingLoaderDeletion.intervalId);
+    pendingLoaderDeletion = null;
+
+    if (shouldRender) {
+        renderPendingLoaderDeletion();
+    }
+}
+
+function renderPendingLoaderDeletion() {
+    const mount = document.getElementById("loaderDeleteNotice");
+    if (!mount) return;
+
+    if (!pendingLoaderDeletion) {
+        mount.innerHTML = "";
+        return;
+    }
+
+    const secondsLeft = Math.max(0, Math.ceil((pendingLoaderDeletion.expiresAt - Date.now()) / 1000));
+    const label = pendingLoaderDeletion.item?.label || "Loader logo";
+
+    mount.innerHTML = `
+        <div class="loader-delete-notice">
+            <span><strong>${escapeHtml(label)}</strong> will be deleted in ${secondsLeft}s.</span>
+            <button class="btn-ghost" type="button" id="undoLoaderDelete">Undo</button>
+        </div>
+    `;
+
+    document.getElementById("undoLoaderDelete")?.addEventListener("click", undoLoaderDeletion);
+}
+
+function undoLoaderDeletion() {
+    clearPendingLoaderDeletion();
+    showToast("Loader delete undone");
+}
+
+async function finalizeLoaderDeletion(domKey) {
+    const activeDeletion = pendingLoaderDeletion;
+    if (!activeDeletion || activeDeletion.domKey !== domKey) return;
+
+    const currentConfig = getCurrentLoaderConfig();
+    const itemIndex = getLoaderItemIndexByDomKey(currentConfig, domKey);
+    clearPendingLoaderDeletion();
+    if (itemIndex < 0) return;
+
+    try {
         const nextItems = currentConfig.items.filter((_, index) => index !== itemIndex);
-        const stillUsed = nextItems.some(item => String(item.fileName || "").toLowerCase() === String(removedItem.fileName || "").toLowerCase());
-        if (!stillUsed) {
-            await deleteLoaderSvgFile(projectRootHandle, removedItem.fileName);
-        }
-
         const nextConfig = normalizeLoaderConfig({
             ...currentConfig,
             items: nextItems,
@@ -1231,32 +1148,6 @@ async function deleteLoaderItem(domKey) {
         console.error(error);
         showToast(error.message || "Unable to delete loader logo", "error");
     }
-}
-
-async function saveLoaderConfig(config) {
-    const nextConfig = normalizeLoaderConfig(config);
-    loaderConfigState = nextConfig;
-    setLoaderBaseConfig(nextConfig);
-
-    const isConnected = await ensureLoaderProjectConnected();
-    if (!isConnected) {
-        throw new Error("Local project connection is required to save loader changes");
-    }
-
-    await writeLoaderConfigToProject(projectRootHandle, nextConfig);
-}
-
-function slugifyLoaderAssetName(value) {
-    return String(value || "")
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") || `loader-${Date.now()}`;
-}
-
-function normalizeHexColor(value, fallback) {
-    const raw = String(value || "").trim();
-    return /^#[0-9a-f]{6}$/i.test(raw) ? raw : fallback;
 }
 
 function matchCategoryRow(query, row, fallbackId) {
