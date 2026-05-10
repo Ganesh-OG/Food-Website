@@ -36,6 +36,13 @@
       "fileName": "Spageti.svg",
       "color": "#22c55e",
       "source": "local"
+    },
+    {
+      "key": "pizza",
+      "label": "Pizza",
+      "fileName": "pizza.svg",
+      "color": "#00ffaa",
+      "source": "local"
     }
   ],
   "customAssets": {}
