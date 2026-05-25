@@ -117,6 +117,35 @@ export function normalizeKeyArray(value) {
     return [];
 }
 
+function isLegacyRemovedPowerMarker(value) {
+    return /^rm_power_/i.test(String(value || "").trim());
+}
+
+function markerTokenToCandidates(marker) {
+    const rawToken = String(marker || "")
+        .trim()
+        .replace(/^rm_power_/i, "")
+        .trim();
+
+    if (!rawToken) return [];
+
+    const normalized = rawToken.toLowerCase();
+    const candidates = new Set([rawToken, normalized]);
+
+    if (/^\d+$/.test(rawToken)) {
+        candidates.add(`Power${rawToken.padStart(3, "0")}`);
+        candidates.add(`power${rawToken.padStart(3, "0")}`);
+    }
+
+    const powerMatch = normalized.match(/^power0*(\d+)$/i);
+    if (powerMatch) {
+        candidates.add(`Power${powerMatch[1].padStart(3, "0")}`);
+        candidates.add(`power${powerMatch[1].padStart(3, "0")}`);
+    }
+
+    return Array.from(candidates);
+}
+
 export async function fetchUserById(id) {
     if (!id) return null;
 
@@ -149,7 +178,7 @@ async function fetchRolePowerKeys(role) {
     return normalizeKeyArray(data?.role_powers);
 }
 
-async function fetchPowerCodes(powerKeys = []) {
+async function fetchPowerRecords(powerKeys = []) {
     if (!powerKeys.length) return [];
 
     const { data, error } = await supabase
@@ -161,7 +190,46 @@ async function fetchPowerCodes(powerKeys = []) {
         throw error;
     }
 
-    return (data || [])
+    return data || [];
+}
+
+function splitUserPowerOverrides(additionalEntries = [], rolePowerRecords = []) {
+    const additionalKeys = [];
+    const removedRoleKeys = [];
+    const rolePowerByKey = new Map(
+        (rolePowerRecords || []).map(item => [String(item.key || "").trim().toLowerCase(), String(item.key || "").trim()])
+    );
+    const rolePowerByCode = new Map(
+        (rolePowerRecords || []).map(item => [String(item.code || "").trim().toLowerCase(), String(item.key || "").trim()])
+    );
+
+    (additionalEntries || []).forEach(entry => {
+        const rawEntry = String(entry || "").trim();
+        if (!rawEntry) return;
+
+        if (!isLegacyRemovedPowerMarker(rawEntry)) {
+            additionalKeys.push(rawEntry);
+            return;
+        }
+
+        const resolvedKey = markerTokenToCandidates(rawEntry)
+            .map(candidate => rolePowerByKey.get(String(candidate || "").trim().toLowerCase())
+                || rolePowerByCode.get(String(candidate || "").trim().toLowerCase()))
+            .find(Boolean);
+
+        if (resolvedKey) {
+            removedRoleKeys.push(resolvedKey);
+        }
+    });
+
+    return {
+        additionalKeys: Array.from(new Set(additionalKeys)),
+        removedRoleKeys: Array.from(new Set(removedRoleKeys))
+    };
+}
+
+async function fetchPowerCodes(powerKeys = []) {
+    return (await fetchPowerRecords(powerKeys))
         .map(item => String(item.code || "").trim().toLowerCase())
         .filter(Boolean);
 }
@@ -170,8 +238,13 @@ export async function resolveUserPowers(user) {
     if (!user) return [];
 
     const roleKeys = await fetchRolePowerKeys(user.role);
-    const additionalKeys = normalizeKeyArray(user.additional_Powers ?? user.additional_powers);
-    const mergedKeys = Array.from(new Set([...roleKeys, ...additionalKeys]));
+    const rolePowerRecords = await fetchPowerRecords(roleKeys);
+    const rawAdditionalKeys = normalizeKeyArray(user.additional_Powers ?? user.additional_powers);
+    const storedRemovedRoleKeys = normalizeKeyArray(user.removed_role_powers ?? user.removedRolePowers);
+    const legacyOverrides = splitUserPowerOverrides(rawAdditionalKeys, rolePowerRecords);
+    const removedRoleKeys = Array.from(new Set([...storedRemovedRoleKeys, ...legacyOverrides.removedRoleKeys]));
+    const filteredRoleKeys = roleKeys.filter(key => !removedRoleKeys.includes(key));
+    const mergedKeys = Array.from(new Set([...filteredRoleKeys, ...legacyOverrides.additionalKeys]));
     return fetchPowerCodes(mergedKeys);
 }
 

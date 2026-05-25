@@ -1,9 +1,14 @@
 import { renderAdminShell, supabase, showToast, formatCurrency, createStatusTag, escapeHtml, askForTextDecision } from "./common.js";
+import { bindDataTable, createDataTableState, renderDataTable } from "./data-table.js";
 
 let orders = [];
 let canCompleteOrders = false;
 let canCancelOrders = false;
 let canPartialCancelOrders = false;
+const ordersTableState = createDataTableState({
+    column: "order",
+    direction: "desc"
+});
 
 document.addEventListener("DOMContentLoaded", initOrders);
 
@@ -11,15 +16,15 @@ async function initOrders() {
     const view = await renderAdminShell({
         title: "Orders",
         subtitle: "Order access is limited to roles that have the sales dashboard power.",
-        requiredAnyPower: ["sales_dashboard", "order_complete", "order_cancel", "order_partial_cancel"]
+        requiredAnyPower: ["order_view", "order_edit", "sales_dashboard", "order_complete", "order_cancel", "order_partial_cancel"]
     });
 
     if (!view?.root) return;
 
     const { root, hasPower } = view;
-    canCompleteOrders = hasPower("sales_dashboard") || hasPower("order_complete");
-    canCancelOrders = hasPower("sales_dashboard") || hasPower("order_cancel");
-    canPartialCancelOrders = hasPower("sales_dashboard") || hasPower("order_partial_cancel");
+    canCompleteOrders = hasPower("order_edit") || hasPower("sales_dashboard") || hasPower("order_complete");
+    canCancelOrders = hasPower("order_edit") || hasPower("sales_dashboard") || hasPower("order_cancel");
+    canPartialCancelOrders = hasPower("order_edit") || hasPower("sales_dashboard") || hasPower("order_partial_cancel");
 
     root.innerHTML = `
         <div class="card orders-card">
@@ -34,19 +39,7 @@ async function initOrders() {
                 <button class="btn-ghost" id="refreshOrders">Refresh</button>
             </div>
             <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Order</th>
-                            <th>Customer</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTable"></tbody>
-                </table>
+                <div id="ordersTableHost"></div>
             </div>
         </div>
     `;
@@ -74,8 +67,8 @@ async function loadOrders() {
 }
 
 function renderOrders() {
-    const table = document.getElementById("ordersTable");
-    if (!table) return;
+    const host = document.getElementById("ordersTableHost");
+    if (!host) return;
 
     const status = document.getElementById("statusFilter").value;
     const search = document.getElementById("orderSearch").value.trim().toLowerCase();
@@ -88,45 +81,95 @@ function renderOrders() {
     });
 
     if (!filtered.length) {
-        table.innerHTML = `<tr><td colspan="6" class="empty">No orders match the current filter.</td></tr>`;
-        return;
+        host.innerHTML = renderDataTable({
+            tableId: "orders-table",
+            columns: getOrderTableColumns(),
+            rows: [],
+            state: ordersTableState,
+            emptyMessage: "No orders match the current filter."
+        });
+    } else {
+        host.innerHTML = renderDataTable({
+            tableId: "orders-table",
+            columns: getOrderTableColumns(),
+            rows: filtered,
+            state: ordersTableState,
+            emptyMessage: "No orders match the current filter."
+        });
     }
 
-    table.innerHTML = filtered.map(order => {
-        const items = getOrderItems(order).map(item => `
-            <div>
-                ${escapeHtml(item.name)} x ${escapeHtml(item.quantity)}
-                ${item.delivery_status ? `• ${escapeHtml(item.delivery_status)}` : ""}
-                ${item.refund_status ? `• ${escapeHtml(item.refund_status)}` : ""}
-            </div>
-        `).join("") || "<div>No items</div>";
+    bindDataTable(document.getElementById("pageContent") || document.body, {
+        tableId: "orders-table",
+        columns: getOrderTableColumns(),
+        rows: filtered,
+        state: ordersTableState
+    }, renderOrders);
 
-        const pending = normalizeOrderStatus(order.status) === "Order Pending";
+    host.querySelectorAll("button[data-action]").forEach(button => {
+        button.addEventListener("click", () => handleOrderAction(button.dataset.id, button.dataset.action));
+    });
+}
 
-        return `
-            <tr>
-                <td>
-                    <div><strong>${escapeHtml(order.order_id)}</strong></div>
-                    <div class="muted">${escapeHtml(order.order_date || "")}</div>
-                </td>
-                <td>${escapeHtml(order.email || "")}</td>
-                <td>${items}</td>
-                <td>${formatCurrency(order.overall_total)}</td>
-                <td>${createStatusTag(order.status)}</td>
-                <td>
+function getOrderTableColumns() {
+    return [
+        {
+            key: "order",
+            label: "Order",
+            value: order => String(order.order_id || "").trim(),
+            render: order => `
+                <div><strong>${escapeHtml(order.order_id)}</strong></div>
+                <div class="muted">${escapeHtml(order.order_date || "")}</div>
+            `,
+            compare: (left, right) => new Date(left?.order_date || 0).getTime() - new Date(right?.order_date || 0).getTime()
+        },
+        {
+            key: "customer",
+            label: "Customer",
+            value: order => String(order.email || "").trim()
+        },
+        {
+            key: "items",
+            label: "Items",
+            value: order => getOrderItems(order).map(item => `${item.name} x ${item.quantity}`).join(" | "),
+            render: order => getOrderItems(order).map(item => `
+                <div>
+                    ${escapeHtml(item.name)} x ${escapeHtml(item.quantity)}
+                    ${item.delivery_status ? `• ${escapeHtml(item.delivery_status)}` : ""}
+                    ${item.refund_status ? `• ${escapeHtml(item.refund_status)}` : ""}
+                </div>
+            `).join("") || "<div>No items</div>"
+        },
+        {
+            key: "total",
+            label: "Total",
+            value: order => Number(order.overall_total || 0),
+            render: order => formatCurrency(order.overall_total),
+            compare: (left, right) => Number(left?.overall_total || 0) - Number(right?.overall_total || 0)
+        },
+        {
+            key: "status",
+            label: "Status",
+            value: order => normalizeOrderStatus(order.status),
+            render: order => createStatusTag(order.status)
+        },
+        {
+            key: "actions",
+            label: "Actions",
+            value: () => "",
+            sortable: false,
+            filterable: false,
+            render: order => {
+                const pending = normalizeOrderStatus(order.status) === "Order Pending";
+                return `
                     <div class="compact-actions">
                         ${canCompleteOrders ? `<button class="btn-secondary" data-action="complete" data-id="${escapeHtml(order.order_id)}" ${pending ? "" : "disabled"}>Complete</button>` : ""}
                         ${canPartialCancelOrders ? `<button class="btn-ghost" data-action="partial" data-id="${escapeHtml(order.order_id)}" ${pending ? "" : "disabled"}>Partial Cancel</button>` : ""}
                         ${canCancelOrders ? `<button class="btn-danger" data-action="cancel" data-id="${escapeHtml(order.order_id)}" ${pending ? "" : "disabled"}>Cancel</button>` : ""}
                     </div>
-                </td>
-            </tr>
-        `;
-    }).join("");
-
-    table.querySelectorAll("button[data-action]").forEach(button => {
-        button.addEventListener("click", () => handleOrderAction(button.dataset.id, button.dataset.action));
-    });
+                `;
+            }
+        }
+    ];
 }
 
 async function handleOrderAction(orderId, action) {

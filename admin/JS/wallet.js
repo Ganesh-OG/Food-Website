@@ -11,14 +11,14 @@ async function initWallet() {
     const view = await renderAdminShell({
         title: "Wallet",
         subtitle: "Find a user, review the current balance, and apply a positive or negative adjustment.",
-        requiredAnyPower: ["wallet_view", "wallet_add_money"]
+        requiredAnyPower: ["wallet_view", "wallet_edit", "wallet_add_money"]
     });
 
     if (!view?.root) return;
 
     const { root, hasPower } = view;
     canViewWallet = hasPower("wallet_view");
-    canAddWalletAmount = hasPower("wallet_add_money");
+    canAddWalletAmount = hasPower("wallet_edit") || hasPower("wallet_add_money");
     const hasUpdateOnlyAccess = !canViewWallet && canAddWalletAmount;
 
     root.innerHTML = hasUpdateOnlyAccess

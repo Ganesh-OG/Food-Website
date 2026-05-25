@@ -3,6 +3,7 @@ import { canAccessAdmin, clearStoredSession, refreshStoredSession, hasMasterCont
 import { applyTheme, initThemeToggle } from "../../components/JS/theme.js";
 
 const USER_MANAGEMENT_POWERS = [
+    "user_view",
     "user_add",
     "user_bulk_add",
     "user_bulk_additon",
@@ -16,12 +17,47 @@ const USER_MANAGEMENT_POWERS = [
     "default_password"
 ];
 
-const DASHBOARD_POWERS = ["sales_dashboard", "dashboard_view"];
-const ORDER_MODULE_POWERS = ["sales_dashboard", "order_complete", "order_cancel", "order_partial_cancel"];
-const MESSAGE_MODULE_POWERS = ["message_view", "message_reply", "message_delete", "message_mark_answered"];
+const DASHBOARD_POWERS = ["sales_dashboard", "dashboard_view", "dashboard_edit"];
+const ORDER_MODULE_POWERS = ["order_view", "order_edit", "sales_dashboard", "order_complete", "order_cancel", "order_partial_cancel"];
+const MESSAGE_MODULE_POWERS = ["message_view", "message_edit", "message_reply", "message_delete", "message_mark_answered"];
 const PRODUCT_MODULE_POWERS = ["product_view", "product_add", "product_edit", "product_disable_stock", "product_disable_qty"];
-const WALLET_MODULE_POWERS = ["wallet_view", "wallet_add_money"];
-const UPDATE_MODULE_POWERS = ["site_control", "about_edit", "slider_manage", "footer_manage", "category_manage", "loader_manage", "site_logo_manage"];
+const WALLET_MODULE_POWERS = ["wallet_view", "wallet_edit", "wallet_add_money"];
+const UPDATE_MODULE_POWERS = [
+    "update_view",
+    "update_edit",
+    "site_management_view",
+    "site_management_edit",
+    "content_pages_view",
+    "content_pages_edit",
+    "site_control",
+    "about_edit",
+    "slider_manage",
+    "footer_manage",
+    "category_manage",
+    "loader_manage",
+    "site_logo_manage"
+];
+const CONTROL_CENTER_POWERS = [
+    "control_center_view",
+    "control_center_edit",
+    "approve_deny_view",
+    "approve_deny_edit",
+    "edit_admins_view",
+    "edit_admins_edit",
+    "promote_users_view",
+    "promote_users_edit",
+    "role_powers_view",
+    "role_powers_edit",
+    "power_categories_view",
+    "power_categories_edit",
+    "create_power_view",
+    "create_power_edit",
+    "req_power",
+    "approve_or_deny_power",
+    "approve_oe_deny_power",
+    "edit_roles_and_power"
+];
+const REQUEST_REVIEW_POWERS = ["approve_or_deny_power", "approve_oe_deny_power", "master_control", "master_controll"];
 
 const NAV_ITEMS = [
     {
@@ -72,6 +108,13 @@ const NAV_ITEMS = [
         icon: "fa-wand-magic-sparkles",
         href: "updates.html",
         anyPowers: UPDATE_MODULE_POWERS
+    },
+    {
+        key: "control-center",
+        label: "Control Center",
+        icon: "fa-user-lock",
+        href: "control-center.html",
+        anyPowers: CONTROL_CENTER_POWERS
     }
 ];
 
@@ -124,6 +167,7 @@ export async function renderAdminShell({
     }
 
     const roleDisplayName = await fetchRoleDisplayName(user?.role);
+    const pendingRequestCount = await fetchPendingRequestCount(powers);
     const nav = availableNav.map(item => `
         <a href="${item.href}" class="${item.key === activePage ? "active" : ""}">
             <i class="fa-solid ${item.icon}" aria-hidden="true"></i>
@@ -166,6 +210,7 @@ export async function renderAdminShell({
                             <span class="admin-user-avatar" aria-hidden="true">
                                 <i class="fa-solid fa-user"></i>
                             </span>
+                            ${pendingRequestCount > 0 ? `<span class="admin-user-alert">${pendingRequestCount > 9 ? "9+" : pendingRequestCount}</span>` : ""}
                             <span class="admin-user-trigger-icon" aria-hidden="true">
                                 <i class="fa-solid fa-chevron-down"></i>
                             </span>
@@ -182,6 +227,13 @@ export async function renderAdminShell({
                                 <i class="fa-solid fa-id-badge" aria-hidden="true"></i>
                                 <span>Profile</span>
                             </a>
+
+                            ${pendingRequestCount > 0 ? `
+                                <a class="btn-ghost icon-btn admin-user-profile-link" href="./control-center.html#reviewSection">
+                                    <i class="fa-solid fa-bell" aria-hidden="true"></i>
+                                    <span>Role / Power Requests</span>
+                                </a>
+                            ` : ""}
 
                             <div class="mode-switcher admin-user-mode-switcher">
                                 <a class="mode-link" href="../index.html">User Side</a>
@@ -252,6 +304,29 @@ export async function renderAdminShell({
             return hasMasterControl(powers) || codes.some(code => powers.includes(String(code || "").trim().toLowerCase()));
         }
     };
+}
+
+async function fetchPendingRequestCount(powers = []) {
+    const normalized = (powers || []).map(item => String(item || "").trim().toLowerCase());
+    const canReview = REQUEST_REVIEW_POWERS.some(code => normalized.includes(code));
+    if (!canReview) return 0;
+
+    try {
+        const { count, error } = await supabase
+            .from("access_requests")
+            .select("id", { count: "exact", head: true })
+            .ilike("status", "pending");
+
+        if (error) {
+            console.error("Pending request count failed:", error);
+            return 0;
+        }
+
+        return Number(count || 0);
+    } catch (error) {
+        console.error("Pending request count failed:", error);
+        return 0;
+    }
 }
 
 function syncAdminUserPanelPlacement() {

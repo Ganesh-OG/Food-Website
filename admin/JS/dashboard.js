@@ -6,7 +6,7 @@ async function initDashboard() {
     const view = await renderAdminShell({
         title: "Dashboard",
         subtitle: "Broader operational view for sales, users, messages, and live site settings.",
-        requiredAnyPower: ["sales_dashboard", "dashboard_view"]
+        requiredAnyPower: ["sales_dashboard", "dashboard_view", "dashboard_edit"]
     });
 
     if (!view?.root) return;

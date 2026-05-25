@@ -1,6 +1,7 @@
 import { renderAdminShell, supabase, showToast, escapeHtml, initAdminFilePickers } from "./common.js";
 
 const USER_COLUMNS = ["id", "name", "email", "dob", "balance", "department", "user_type", "role"];
+const POWER_USER_VIEW = "user_view";
 const POWER_USER_ADD = "user_add";
 const POWER_USER_BULK = "user_bulk_additon";
 const POWER_USER_BULK_ALIAS = "user_bulk_add";
@@ -15,6 +16,7 @@ const ROLE_SCOPED_ADD_POWERS = {
     "sales staff": "user_add_sales_staff"
 };
 const USER_ACCESS_POWERS = [
+    POWER_USER_VIEW,
     POWER_USER_ADD,
     POWER_USER_BULK,
     POWER_USER_BULK_ALIAS,
@@ -39,6 +41,7 @@ let canAddSingleUser = false;
 let canBulkAddUsers = false;
 let canEditUsers = false;
 let canManageDefaultPasswords = false;
+let canViewUsers = false;
 
 document.addEventListener("DOMContentLoaded", initUsersModule);
 
@@ -59,6 +62,7 @@ async function initUsersModule() {
     canBulkAddUsers = hasPower(POWER_USER_BULK) || hasPower(POWER_USER_BULK_ALIAS) || hasAnyRoleScopedAddPower();
     canEditUsers = hasPower(POWER_USER_EDIT) || hasPower(POWER_USER_EDIT_ALIAS);
     canManageDefaultPasswords = hasPower(POWER_DEFAULT_PASSWORD);
+    canViewUsers = hasPower(POWER_USER_VIEW) || canAddSingleUser || canBulkAddUsers || canEditUsers || canManageDefaultPasswords;
 
     await loadRolesAndDefaultPasswords();
 
@@ -68,7 +72,9 @@ async function initUsersModule() {
             ? "bulkUserSection"
             : canEditUsers
                 ? "userEditSection"
-                : "defaultPasswordSection";
+                : canManageDefaultPasswords
+                    ? "defaultPasswordSection"
+                    : "userViewSection";
 
     root.innerHTML = `
         <div class="users-workspace">
@@ -79,6 +85,7 @@ async function initUsersModule() {
                     <p class="muted">Open the workflow you need and work from one place.</p>
                 </div>
                 <div class="users-menu-list">
+                    <button class="users-menu-item ${activeSection === "userViewSection" ? "active" : ""}" type="button" data-user-target="userViewSection" ${canViewUsers && !canAddSingleUser && !canBulkAddUsers && !canEditUsers && !canManageDefaultPasswords ? "" : "hidden"}>User View</button>
                     <button class="users-menu-item ${activeSection === "singleUserSection" ? "active" : ""}" type="button" data-user-target="singleUserSection" ${canAddSingleUser ? "" : "hidden"}>Single User Add</button>
                     <button class="users-menu-item ${activeSection === "bulkUserSection" ? "active" : ""}" type="button" data-user-target="bulkUserSection" ${canBulkAddUsers ? "" : "hidden"}>Bulk Upload</button>
                     <button class="users-menu-item ${activeSection === "userEditSection" ? "active" : ""}" type="button" data-user-target="userEditSection" ${canEditUsers ? "" : "hidden"}>User Edit</button>
@@ -100,6 +107,14 @@ async function initUsersModule() {
                             <button class="btn-ghost" type="button" id="resetSingleUserForm">Discard</button>
                         </div>
                     </form>
+                </div>
+
+                <div class="card users-panel ${activeSection === "userViewSection" ? "active" : ""}" id="userViewSection" ${canViewUsers && !canAddSingleUser && !canBulkAddUsers && !canEditUsers && !canManageDefaultPasswords ? "" : "hidden"}>
+                    <div class="users-panel-header">
+                        <h3>User View</h3>
+                        <p class="muted">This account has user-module visibility but no add or edit actions assigned yet.</p>
+                    </div>
+                    <div class="empty">Assign user_add, user_edit, or default-password powers to enable writable user workflows.</div>
                 </div>
 
                 <div class="card users-panel ${activeSection === "bulkUserSection" ? "active" : ""}" id="bulkUserSection" ${activeSection === "bulkUserSection" ? "" : "hidden"}>

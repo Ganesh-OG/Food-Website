@@ -15,16 +15,16 @@ async function initMessages() {
     const view = await renderAdminShell({
         title: "Messages",
         subtitle: "Review support requests, reply to users, and keep the inbox status updated.",
-        requiredAnyPower: ["message_view", "message_reply", "message_delete", "message_mark_answered"]
+        requiredAnyPower: ["message_view", "message_edit", "message_reply", "message_delete", "message_mark_answered"]
     });
 
     if (!view?.root) return;
 
     const { root, hasPower, user } = view;
     currentAdmin = user;
-    canReply = hasPower("message_reply");
-    canMarkStatus = hasPower("message_mark_answered") || hasPower("message_reply");
-    canDelete = hasPower("message_delete");
+    canReply = hasPower("message_edit") || hasPower("message_reply");
+    canMarkStatus = hasPower("message_edit") || hasPower("message_mark_answered") || hasPower("message_reply");
+    canDelete = hasPower("message_edit") || hasPower("message_delete");
 
     root.innerHTML = `
         <div class="panel-grid">

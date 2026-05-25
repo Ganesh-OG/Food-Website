@@ -10,6 +10,7 @@ import {
     getStoragePublicUrl,
     initAdminFilePickers
 } from "./common.js";
+import { bindDataTable, createDataTableState, renderDataTable } from "./data-table.js";
 
 let products = [];
 let categoryOptions = [];
@@ -23,6 +24,10 @@ let canAddProducts = false;
 let canEditProducts = false;
 let canControlStockVisibility = false;
 let canControlQtyVisibility = false;
+const productsTableState = createDataTableState({
+    column: "name",
+    direction: "asc"
+});
 
 document.addEventListener("DOMContentLoaded", initProducts);
 
@@ -114,32 +119,11 @@ async function initProducts() {
                         <option value="enabled">Enabled</option>
                         <option value="disabled">Disabled</option>
                     </select>
-                    <select id="sortBy">
-                        <option value="">Default Sort</option>
-                        <option value="name-asc">Name A-Z</option>
-                        <option value="name-desc">Name Z-A</option>
-                        <option value="price-desc">Price Highest to Lowest</option>
-                        <option value="price-asc">Price Lowest to Highest</option>
-                        <option value="id-asc">Product ID A-Z</option>
-                        <option value="id-desc">Product ID Z-A</option>
-                    </select>
                     <button class="btn-secondary" type="button" id="applyProductFilters">Apply Filter</button>
                     <button class="btn-ghost" type="button" id="resetProductFilters">Reset</button>
                 </div>
                 <div class="table-wrap products-table-wrap">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Image</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Price</th>
-                                <th>Stock</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="productsTable"></tbody>
-                    </table>
+                    <div id="productsTableHost"></div>
                 </div>
             </div>
         </div>
@@ -198,13 +182,12 @@ async function loadProducts() {
 }
 
 function renderProducts() {
-    const table = document.getElementById("productsTable");
-    if (!table) return;
+    const host = document.getElementById("productsTableHost");
+    if (!host) return;
 
     const search = document.getElementById("productSearch").value.trim().toLowerCase();
     const categoryFilter = document.getElementById("filterCategory")?.value || "";
     const statusFilter = document.getElementById("filterStatus")?.value || "";
-    const sortBy = document.getElementById("sortBy")?.value || "";
 
     let filtered = products.filter(product => {
         const haystack = `${product.name || ""} ${product.category || ""} ${product.id || ""}`.toLowerCase();
@@ -214,57 +197,84 @@ function renderProducts() {
         return matchesSearch && matchesCategory && matchesStatus;
     });
 
-    filtered = sortProducts(filtered, sortBy);
+    host.innerHTML = renderDataTable({
+        tableId: "products-table",
+        columns: getProductTableColumns(),
+        rows: filtered,
+        state: productsTableState,
+        emptyMessage: "No products found.",
+        renderRowAttrs: product => `data-row-id="${escapeHtml(product.id)}"`
+    });
 
-    if (!filtered.length) {
-        table.innerHTML = `<tr><td colspan="6" class="empty">No products found.</td></tr>`;
-        return;
-    }
+    bindDataTable(document.getElementById("pageContent") || document.body, {
+        tableId: "products-table",
+        columns: getProductTableColumns(),
+        rows: filtered,
+        state: productsTableState
+    }, renderProducts);
 
-    table.innerHTML = filtered.map(product => {
-        if (isMobileView() && mobileEditingId === product.id) {
-            return getMobileInlineDesktopEditor(product);
-        }
-
-        return `
-            <tr data-row-id="${escapeHtml(product.id)}">
-                <td>
-                    ${product.image ? `<img class="thumb" src="${getStoragePublicUrl("Food-Website-Storage", `Products/${product.image}`)}" alt="${escapeHtml(product.name)}">` : ""}
-                </td>
-                <td>
-                    <strong>${escapeHtml(product.name)}</strong>
-                    <div class="muted code">${escapeHtml(product.id)}</div>
-                </td>
-                <td>${escapeHtml(product.category)}</td>
-                <td>${formatCurrency(product.price)}</td>
-                <td>${escapeHtml(product.stock)}</td>
-                <td>
-                    <div class="compact-actions">
-                        ${canEditProducts ? `<button class="btn-secondary" data-edit="${escapeHtml(product.id)}">Edit</button>` : `<span class="muted">View only</span>`}
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join("");
-
-    table.querySelectorAll("[data-edit]").forEach(button => {
+    host.querySelectorAll("[data-edit]").forEach(button => {
         button.addEventListener("click", () => handleEdit(button.dataset.edit));
     });
 
-    bindMobileInlineEditor();
-    initAdminFilePickers(table);
+    initAdminFilePickers(host);
+}
+
+function getProductTableColumns() {
+    return [
+        {
+            key: "image",
+            label: "Image",
+            value: product => String(product.image || "").trim(),
+            sortable: false,
+            render: product => product.image
+                ? `<img class="thumb" src="${getStoragePublicUrl("Food-Website-Storage", `Products/${product.image}`)}" alt="${escapeHtml(product.name)}">`
+                : ""
+        },
+        {
+            key: "name",
+            label: "Name",
+            value: product => String(product.name || "").trim(),
+            render: product => `
+                <strong>${escapeHtml(product.name)}</strong>
+                <div class="muted code">${escapeHtml(product.id)}</div>
+            `
+        },
+        {
+            key: "category",
+            label: "Category",
+            value: product => String(product.category || "").trim()
+        },
+        {
+            key: "price",
+            label: "Price",
+            value: product => Number(product.price || 0),
+            render: product => formatCurrency(product.price),
+            compare: (left, right) => Number(left?.price || 0) - Number(right?.price || 0)
+        },
+        {
+            key: "stock",
+            label: "Stock",
+            value: product => Number(product.stock || 0),
+            compare: (left, right) => Number(left?.stock || 0) - Number(right?.stock || 0)
+        },
+        {
+            key: "actions",
+            label: "Actions",
+            value: () => "",
+            sortable: false,
+            filterable: false,
+            render: product => `
+                <div class="compact-actions">
+                    ${canEditProducts ? `<button class="btn-secondary" data-edit="${escapeHtml(product.id)}">Edit</button>` : `<span class="muted">View only</span>`}
+                </div>
+            `
+        }
+    ];
 }
 
 function handleEdit(id) {
     if (!canEditProducts) return;
-
-    if (isMobileView()) {
-        mobileEditingId = mobileEditingId === id ? null : id;
-        clearMobilePreviewUrl();
-        renderProducts();
-        return;
-    }
-
     fillEditForm(id);
 }
 
@@ -510,34 +520,11 @@ function syncRestrictedProductControls() {
 function resetFilters() {
     const category = document.getElementById("filterCategory");
     const status = document.getElementById("filterStatus");
-    const sort = document.getElementById("sortBy");
 
     if (category) category.value = "";
     if (status) status.value = "";
-    if (sort) sort.value = "";
 
     renderProducts();
-}
-
-function sortProducts(rows, sortBy) {
-    const sorted = [...rows];
-
-    switch (sortBy) {
-        case "name-asc":
-            return sorted.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
-        case "name-desc":
-            return sorted.sort((a, b) => String(b.name || "").localeCompare(String(a.name || "")));
-        case "price-desc":
-            return sorted.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
-        case "price-asc":
-            return sorted.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-        case "id-asc":
-            return sorted.sort((a, b) => compareProductIds(a.id, b.id));
-        case "id-desc":
-            return sorted.sort((a, b) => compareProductIds(b.id, a.id));
-        default:
-            return sorted;
-    }
 }
 
 function compareProductIds(first, second) {

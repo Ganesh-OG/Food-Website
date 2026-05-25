@@ -32,6 +32,18 @@ let canControlSite = false;
 let canManageSlider = false;
 let canEditAbout = false;
 let canManageSiteLogo = false;
+let canViewUpdates = false;
+let canEditUpdates = false;
+let canManageCategories = false;
+let canManageLoader = false;
+let canViewFooter = false;
+let canViewServiceStatus = false;
+let canViewHero = false;
+let canViewAbout = false;
+let canViewContact = false;
+let canViewCategories = false;
+let canViewLoader = false;
+let canViewSiteLogo = false;
 let loaderConfigState = getDefaultLoaderConfig();
 const LOADER_GITHUB_URL = "https://github.com/Ganesh-OG/Food-Website/tree/main/images/loader";
 let pendingLoaderDeletion = null;
@@ -58,34 +70,60 @@ async function initUpdates() {
     const view = await renderAdminShell({
         title: "Website Updates",
         subtitle: "Each update panel opens only for roles with the matching management powers.",
-        requiredAnyPower: ["site_control", "about_edit", "slider_manage", "footer_manage", "category_manage", "loader_manage", "site_logo_manage"]
+        requiredAnyPower: [
+            "update_view",
+            "update_edit",
+            "site_management_view",
+            "site_management_edit",
+            "content_pages_view",
+            "content_pages_edit",
+            "site_control",
+            "about_edit",
+            "slider_manage",
+            "footer_manage",
+            "category_manage",
+            "loader_manage",
+            "site_logo_manage"
+        ]
     });
 
     if (!view?.root) return;
 
     const { root, hasPower } = view;
-    canManageFooter = hasPower("footer_manage");
-    canControlSite = hasPower("site_control");
-    canManageSlider = hasPower("slider_manage");
-    canEditAbout = hasPower("about_edit");
-    canManageSiteLogo = hasPower("site_logo_manage") || hasPower("site_control");
-    const canManageCategories = hasPower("site_control") || hasPower("category_manage");
-    const canManageLoader = hasPower("site_control") || hasPower("loader_manage");
-    const activePanelId = canManageFooter
-        ? "appConfigPanel"
-        : canControlSite
-            ? "serviceStatusPanel"
-            : canManageSiteLogo
-                ? "siteLogoPanel"
-                : canManageSlider
-                ? "heroPanel"
-                : canEditAbout
-                    ? "aboutPanel"
-                    : canManageCategories
-                        ? "categoryPanel"
-                        : canManageLoader
-                            ? "loaderPanel"
-                            : "contactPanel";
+    const hasContentPagesView = hasPower("content_pages_view") || hasPower("content_pages_edit");
+    const hasSiteManagementView = hasPower("site_management_view") || hasPower("site_management_edit");
+
+    canViewUpdates = hasPower("update_view") || hasPower("update_edit") || hasContentPagesView || hasSiteManagementView;
+    canEditUpdates = hasPower("update_edit") || hasPower("site_management_edit");
+    canManageFooter = canEditUpdates || hasPower("content_pages_edit") || hasPower("footer_manage");
+    canControlSite = canEditUpdates || hasPower("site_control");
+    canManageSlider = canEditUpdates || hasPower("content_pages_edit") || hasPower("slider_manage");
+    canEditAbout = canEditUpdates || hasPower("content_pages_edit") || hasPower("about_edit");
+    canManageSiteLogo = canEditUpdates || hasPower("content_pages_edit") || hasPower("site_logo_manage") || hasPower("site_control");
+    canManageCategories = canEditUpdates || hasPower("content_pages_edit") || hasPower("site_control") || hasPower("category_manage");
+    canManageLoader = canEditUpdates || hasPower("site_control") || hasPower("loader_manage");
+    canViewFooter = canManageFooter || hasContentPagesView;
+    canViewContact = canManageFooter || hasContentPagesView;
+    canViewHero = canManageSlider || hasContentPagesView;
+    canViewAbout = canEditAbout || hasContentPagesView;
+    canViewCategories = canManageCategories || hasContentPagesView;
+    canViewServiceStatus = canControlSite || hasSiteManagementView;
+    canViewSiteLogo = canManageSiteLogo || hasSiteManagementView;
+    canViewLoader = canManageLoader || hasSiteManagementView;
+
+    const visiblePanels = [
+        canViewFooter ? "appConfigPanel" : "",
+        canViewServiceStatus ? "serviceStatusPanel" : "",
+        canViewSiteLogo ? "siteLogoPanel" : "",
+        canViewHero ? "heroPanel" : "",
+        canViewAbout ? "aboutPanel" : "",
+        canViewContact ? "contactPanel" : "",
+        canViewCategories ? "categoryPanel" : "",
+        canViewLoader ? "loaderPanel" : ""
+    ].filter(Boolean);
+
+    const hasOnlyViewAccess = canViewUpdates && !visiblePanels.length;
+    const activePanelId = visiblePanels[0] || "updatesInfoPanel";
 
     root.innerHTML = `
         <div class="updates-workspace">
@@ -96,91 +134,103 @@ async function initUpdates() {
                     <p class="muted">Click a function name to open that control container.</p>
                 </div>
                 <div class="updates-menu-list">
-                    <button class="updates-menu-item ${activePanelId === "appConfigPanel" ? "active" : ""}" type="button" data-update-target="appConfigPanel" ${canManageFooter ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "appConfigPanel" ? "active" : ""}" type="button" data-update-target="appConfigPanel" ${canViewFooter ? "" : "hidden"}>
                         <span>Footer / App Config</span>
                     </button>
-                    <button class="updates-menu-item ${activePanelId === "serviceStatusPanel" ? "active" : ""}" type="button" data-update-target="serviceStatusPanel" ${canControlSite ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "serviceStatusPanel" ? "active" : ""}" type="button" data-update-target="serviceStatusPanel" ${canViewServiceStatus ? "" : "hidden"}>
                         <span>Service Status</span>
                     </button>
-                    <button class="updates-menu-item ${activePanelId === "siteLogoPanel" ? "active" : ""}" type="button" data-update-target="siteLogoPanel" ${canManageSiteLogo ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "siteLogoPanel" ? "active" : ""}" type="button" data-update-target="siteLogoPanel" ${canViewSiteLogo ? "" : "hidden"}>
                         <span>Site Logo</span>
                     </button>
-                    <button class="updates-menu-item ${activePanelId === "heroPanel" ? "active" : ""}" type="button" data-update-target="heroPanel" ${canManageSlider ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "heroPanel" ? "active" : ""}" type="button" data-update-target="heroPanel" ${canViewHero ? "" : "hidden"}>
                         <span>Home Slider</span>
                     </button>
-                    <button class="updates-menu-item ${activePanelId === "aboutPanel" ? "active" : ""}" type="button" data-update-target="aboutPanel" ${canEditAbout ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "aboutPanel" ? "active" : ""}" type="button" data-update-target="aboutPanel" ${canViewAbout ? "" : "hidden"}>
                         <span>About Content</span>
                     </button>
-                    <button class="updates-menu-item ${activePanelId === "contactPanel" ? "active" : ""}" type="button" data-update-target="contactPanel" ${canManageFooter ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "contactPanel" ? "active" : ""}" type="button" data-update-target="contactPanel" ${canViewContact ? "" : "hidden"}>
                         <span>Contact Content</span>
                     </button>
-                    <button class="updates-menu-item ${activePanelId === "categoryPanel" ? "active" : ""}" type="button" data-update-target="categoryPanel" ${canManageCategories ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "categoryPanel" ? "active" : ""}" type="button" data-update-target="categoryPanel" ${canViewCategories ? "" : "hidden"}>
                         <span>Category Manage</span>
                     </button>
-                    <button class="updates-menu-item ${activePanelId === "loaderPanel" ? "active" : ""}" type="button" data-update-target="loaderPanel" ${canManageLoader ? "" : "hidden"}>
+                    <button class="updates-menu-item ${activePanelId === "loaderPanel" ? "active" : ""}" type="button" data-update-target="loaderPanel" ${canViewLoader ? "" : "hidden"}>
                         <span>Loader Control</span>
+                    </button>
+                    <button class="updates-menu-item ${activePanelId === "updatesInfoPanel" ? "active" : ""}" type="button" data-update-target="updatesInfoPanel" ${hasOnlyViewAccess ? "" : "hidden"}>
+                        <span>Module Access</span>
                     </button>
                 </div>
             </aside>
 
             <section class="updates-content">
-                <div class="card updates-panel ${activePanelId === "appConfigPanel" ? "active" : ""}" id="appConfigPanel" ${canManageFooter && activePanelId === "appConfigPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "updatesInfoPanel" ? "active" : ""}" id="updatesInfoPanel" ${hasOnlyViewAccess && activePanelId === "updatesInfoPanel" ? "" : "hidden"}>
+                    <div class="updates-panel-header">
+                        <h3>Updates View</h3>
+                        <p class="muted">This account can access the Updates module, but no editable panels are assigned yet.</p>
+                    </div>
+                    <div class="empty">Assign update_edit or one of the legacy site-management powers to enable module actions.</div>
+                </div>
+                <div class="card updates-panel ${activePanelId === "appConfigPanel" ? "active" : ""}" id="appConfigPanel" ${canViewFooter && activePanelId === "appConfigPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Footer / App Config</h3>
                         <p class="muted">Manage contact details and footer information visible across the website.</p>
                     </div>
                     <form id="appConfigForm" class="form-grid">
-                        <input id="configAddress" class="full" type="text" placeholder="Address">
-                        <input id="configMapLink" class="full" type="text" placeholder="Map link">
-                        <input id="configHours" type="text" placeholder="Opening hours">
-                        <input id="configPhones" type="text" placeholder="Phones (comma separated)">
-                        <input id="configEmails" class="full" type="text" placeholder="Emails (comma separated)">
-                        <button class="btn full" type="submit">Save Footer Settings</button>
+                        <input id="configAddress" class="full" type="text" placeholder="Address" ${canManageFooter ? "" : "disabled"}>
+                        <input id="configMapLink" class="full" type="text" placeholder="Map link" ${canManageFooter ? "" : "disabled"}>
+                        <input id="configHours" type="text" placeholder="Opening hours" ${canManageFooter ? "" : "disabled"}>
+                        <input id="configPhones" type="text" placeholder="Phones (comma separated)" ${canManageFooter ? "" : "disabled"}>
+                        <input id="configEmails" class="full" type="text" placeholder="Emails (comma separated)" ${canManageFooter ? "" : "disabled"}>
+                        ${canManageFooter ? `<button class="btn full" type="submit">Save Footer Settings</button>` : ``}
                     </form>
                 </div>
 
-                <div class="card updates-panel ${activePanelId === "serviceStatusPanel" ? "active" : ""}" id="serviceStatusPanel" ${canControlSite && activePanelId === "serviceStatusPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "serviceStatusPanel" ? "active" : ""}" id="serviceStatusPanel" ${canViewServiceStatus && activePanelId === "serviceStatusPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Service Status</h3>
                         <p class="muted">Control whether ordering is shown as available or temporarily stopped.</p>
                     </div>
                     <form id="serviceStatusForm" class="stack">
                         <div id="serviceStatusTag"></div>
-                        <select id="serviceStatusValue">
+                        <select id="serviceStatusValue" ${canControlSite ? "" : "disabled"}>
                             <option value="Working">Working</option>
                             <option value="Stopped">Stopped</option>
                         </select>
-                        <button class="btn" type="submit">Update Service</button>
+                        ${canControlSite ? `<button class="btn" type="submit">Update Service</button>` : ``}
                     </form>
                 </div>
 
-                <div class="card updates-panel ${activePanelId === "siteLogoPanel" ? "active" : ""}" id="siteLogoPanel" ${canManageSiteLogo && activePanelId === "siteLogoPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "siteLogoPanel" ? "active" : ""}" id="siteLogoPanel" ${canViewSiteLogo && activePanelId === "siteLogoPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Site Logo</h3>
                         <p class="muted">Upload the user-side header logo. The selected file is stored in app_config under the Logo field.</p>
                     </div>
                     <form id="siteLogoForm" class="form-grid">
-                        <input id="siteLogoAsset" class="full" type="file" accept="image/*" required>
-                        <button class="btn full" type="submit">Save Site Logo</button>
+                        <input id="siteLogoAsset" class="full" type="file" accept="image/*" ${canManageSiteLogo ? "required" : "disabled"}>
+                        ${canManageSiteLogo ? `<button class="btn full" type="submit">Save Site Logo</button>` : ``}
                     </form>
                     <div class="list updates-scroll-list" id="siteLogoList"></div>
                 </div>
 
-                <div class="card updates-panel ${activePanelId === "heroPanel" ? "active" : ""}" id="heroPanel" ${canManageSlider && activePanelId === "heroPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "heroPanel" ? "active" : ""}" id="heroPanel" ${canViewHero && activePanelId === "heroPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Home Slider</h3>
                         <p class="muted">Add new hero slides, then edit or delete each existing slide from the list below.</p>
                     </div>
-                    <form id="heroForm" class="form-grid">
-                        <input id="heroName" type="text" placeholder="Slide title" required>
-                        <input id="heroText" type="text" placeholder="Slide text" required>
-                        <input id="heroImage" class="full" type="file" accept="image/*" required>
-                        <button class="btn full" type="submit">Add Slider Image</button>
-                    </form>
+                    ${canManageSlider ? `
+                        <form id="heroForm" class="form-grid">
+                            <input id="heroName" type="text" placeholder="Slide title" required>
+                            <input id="heroText" type="text" placeholder="Slide text" required>
+                            <input id="heroImage" class="full" type="file" accept="image/*" required>
+                            <button class="btn full" type="submit">Add Slider Image</button>
+                        </form>
+                    ` : ``}
                     <div class="list updates-scroll-list" id="heroList"></div>
                 </div>
 
-                <div class="card updates-panel ${activePanelId === "aboutPanel" ? "active" : ""}" id="aboutPanel" ${canEditAbout && activePanelId === "aboutPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "aboutPanel" ? "active" : ""}" id="aboutPanel" ${canViewAbout && activePanelId === "aboutPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>About Content</h3>
                         <p class="muted">Edit the About section separately with its own title, content, status, and image.</p>
@@ -188,7 +238,7 @@ async function initUpdates() {
                     <div class="list updates-scroll-list" id="aboutList"></div>
                 </div>
 
-                <div class="card updates-panel ${activePanelId === "contactPanel" ? "active" : ""}" id="contactPanel" ${canManageFooter && activePanelId === "contactPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "contactPanel" ? "active" : ""}" id="contactPanel" ${canViewContact && activePanelId === "contactPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Contact Content</h3>
                         <p class="muted">Manage the Contact section independently from About.</p>
@@ -196,20 +246,22 @@ async function initUpdates() {
                     <div class="list updates-scroll-list" id="contactList"></div>
                 </div>
 
-                <div class="card updates-panel ${activePanelId === "categoryPanel" ? "active" : ""}" id="categoryPanel" ${canManageCategories && activePanelId === "categoryPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "categoryPanel" ? "active" : ""}" id="categoryPanel" ${canViewCategories && activePanelId === "categoryPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Category Manage</h3>
                         <p class="muted">Add, edit, or remove the categories shown on the home page.</p>
                     </div>
-                    <form id="categoryForm" class="form-grid category-create-form">
-                        <input id="categoryName" type="text" placeholder="Category name" required>
-                        <input id="categoryImage" type="file" accept="image/*" required>
-                        <button class="btn full" type="submit">Add Category</button>
-                    </form>
+                    ${canManageCategories ? `
+                        <form id="categoryForm" class="form-grid category-create-form">
+                            <input id="categoryName" type="text" placeholder="Category name" required>
+                            <input id="categoryImage" type="file" accept="image/*" required>
+                            <button class="btn full" type="submit">Add Category</button>
+                        </form>
+                    ` : ``}
                     <div class="list updates-scroll-list" id="categoryList"></div>
                 </div>
 
-                <div class="card updates-panel ${activePanelId === "loaderPanel" ? "active" : ""}" id="loaderPanel" ${canManageLoader && activePanelId === "loaderPanel" ? "" : "hidden"}>
+                <div class="card updates-panel ${activePanelId === "loaderPanel" ? "active" : ""}" id="loaderPanel" ${canViewLoader && activePanelId === "loaderPanel" ? "" : "hidden"}>
                     <div class="updates-panel-header">
                         <h3>Loader Manage</h3>
                         <p class="muted">Admin saves loader settings as config, and the website loader uses that config first.</p>
@@ -222,12 +274,14 @@ async function initUpdates() {
                         <h4>1. Add New Logo</h4>
                         <p class="muted">Add the label, SVG file name, and color. Upload the SVG manually in GitHub when needed.</p>
                     </div>
-                    <form id="loaderAddForm" class="form-grid">
-                        <input id="loaderNewLabel" type="text" placeholder="New logo name" required>
-                        <input id="loaderNewFileName" type="text" placeholder="SVG file name like coffee.svg" required>
-                        <input id="loaderNewColor" type="color" value="#f7a600">
-                        <button class="btn full" type="submit">Add New Logo</button>
-                    </form>
+                    ${canManageLoader ? `
+                        <form id="loaderAddForm" class="form-grid">
+                            <input id="loaderNewLabel" type="text" placeholder="New logo name" required>
+                            <input id="loaderNewFileName" type="text" placeholder="SVG file name like coffee.svg" required>
+                            <input id="loaderNewColor" type="color" value="#f7a600">
+                            <button class="btn full" type="submit">Add New Logo</button>
+                        </form>
+                    ` : ``}
                     <div class="loader-section-heading">
                         <h4>2. Edit Existing Logos</h4>
                         <p class="muted">Edit label, SVG file name, or color. Replace the actual SVG file manually from GitHub if needed.</p>
@@ -241,15 +295,15 @@ async function initUpdates() {
                     <form id="loaderSpeedForm" class="form-grid">
                         <div>
                             <label for="loaderCycleSeconds">Color/logo speed</label>
-                            <input id="loaderCycleSeconds" type="number" min="2" max="20" step="0.1" placeholder="Color cycle seconds">
+                            <input id="loaderCycleSeconds" type="number" min="2" max="20" step="0.1" placeholder="Color cycle seconds" ${canManageLoader ? "" : "disabled"}>
                             <div class="updates-file-meta">Lower value = faster color and logo switching.</div>
                         </div>
                         <div>
                             <label for="loaderOrbitSeconds">Ball movement speed</label>
-                            <input id="loaderOrbitSeconds" type="number" min="2" max="20" step="0.1" placeholder="Orbit seconds">
+                            <input id="loaderOrbitSeconds" type="number" min="2" max="20" step="0.1" placeholder="Orbit seconds" ${canManageLoader ? "" : "disabled"}>
                             <div class="updates-file-meta">Lower value = faster small ball movement.</div>
                         </div>
-                        <button class="btn full" type="submit">Save Speed</button>
+                        ${canManageLoader ? `<button class="btn full" type="submit">Save Speed</button>` : ``}
                     </form>
                     <div class="loader-section-heading">
                         <h4>4. Generate Config</h4>
@@ -277,7 +331,12 @@ async function initUpdates() {
     bindUpdatePanelMenu();
     initAdminFilePickers(root);
 
-    await loadUpdateData();
+    try {
+        await loadUpdateData();
+    } catch (error) {
+        console.error(error);
+        showToast(error.message || "Unable to load updates data", "error");
+    }
 }
 
 async function loadUpdateData() {
@@ -289,6 +348,11 @@ async function loadUpdateData() {
         supabase.from("hero_slider").select("*").order("id"),
         supabase.from("category").select("*").order("category_name")
     ]);
+
+    const loadError = appRes.error || serviceRes.error || aboutRes.error || contactRes.error || heroRes.error || categoryRes.error;
+    if (loadError) {
+        throw loadError;
+    }
 
     appConfig = appRes.data?.[0] || null;
     serviceStatus = serviceRes.data?.[0] || null;
@@ -348,14 +412,14 @@ function renderHeroList() {
                 <form class="list-item hero-edit-form is-editing" data-slide-id="${escapeHtml(slide.id)}" data-file="${escapeHtml(slide.file_name || "")}">
                     <img class="thumb" src="${slide.file_name ? getStoragePublicUrl("Food-Website-Storage", `Slider Images/${slide.file_name}`) : ""}" alt="${escapeHtml(slide.name)}">
                     <div class="hero-edit-fields">
-                        <input type="text" name="name" value="${escapeHtml(slide.name || "")}" placeholder="Slide title" required>
-                        <textarea name="content_display" rows="3" placeholder="Slide text" required>${escapeHtml(slide.content_display || "")}</textarea>
-                        <input type="file" name="image" accept="image/*">
+                        <input type="text" name="name" value="${escapeHtml(slide.name || "")}" placeholder="Slide title" required ${canManageSlider ? "" : "disabled"}>
+                        <textarea name="content_display" rows="3" placeholder="Slide text" required ${canManageSlider ? "" : "disabled"}>${escapeHtml(slide.content_display || "")}</textarea>
+                        <input type="file" name="image" accept="image/*" ${canManageSlider ? "" : "disabled"}>
                     </div>
                     <div class="compact-actions">
-                        <button class="btn-secondary" type="submit">Save</button>
-                        <button class="btn-ghost" type="button" data-cancel-slide="${escapeHtml(slide.id)}">Cancel</button>
-                        <button class="btn-danger" type="button" data-delete-slide="${escapeHtml(slide.id)}" data-file="${escapeHtml(slide.file_name || "")}">Delete</button>
+                        ${canManageSlider ? `<button class="btn-secondary" type="submit">Save</button>` : ``}
+                        ${canManageSlider ? `<button class="btn-ghost" type="button" data-cancel-slide="${escapeHtml(slide.id)}">Cancel</button>` : ``}
+                        ${canManageSlider ? `<button class="btn-danger" type="button" data-delete-slide="${escapeHtml(slide.id)}" data-file="${escapeHtml(slide.file_name || "")}">Delete</button>` : ``}
                     </div>
                 </form>
             ` : `
@@ -366,8 +430,8 @@ function renderHeroList() {
                         <div class="muted">${escapeHtml(slide.content_display || "")}</div>
                     </div>
                     <div class="compact-actions">
-                        <button class="btn-secondary" type="button" data-edit-slide="${escapeHtml(slide.id)}">Edit</button>
-                        <button class="btn-danger" type="button" data-delete-slide="${escapeHtml(slide.id)}" data-file="${escapeHtml(slide.file_name || "")}">Delete</button>
+                        ${canManageSlider ? `<button class="btn-secondary" type="button" data-edit-slide="${escapeHtml(slide.id)}">Edit</button>` : ``}
+                        ${canManageSlider ? `<button class="btn-danger" type="button" data-delete-slide="${escapeHtml(slide.id)}" data-file="${escapeHtml(slide.file_name || "")}">Delete</button>` : ``}
                     </div>
                 </div>
             `}
@@ -421,13 +485,13 @@ function renderAboutList(sectionName, mountId) {
                 data-initial-image-url="${escapeHtml(item.image_path ? getAboutImageUrl(item.section, item.image_path) : "")}"
             >
                 <div><strong>${escapeHtml(item.section)}</strong> ${createStatusTag(item.Status || "disabled")}</div>
-                <input type="text" name="title" value="${escapeHtml(item.title || "")}" placeholder="Title">
-                <textarea name="content" rows="4" placeholder="Content">${escapeHtml(item.content || "")}</textarea>
-                <select name="status">
+                <input type="text" name="title" value="${escapeHtml(item.title || "")}" placeholder="Title" ${canEditAbout ? "" : "disabled"}>
+                <textarea name="content" rows="4" placeholder="Content" ${canEditAbout ? "" : "disabled"}>${escapeHtml(item.content || "")}</textarea>
+                <select name="status" ${canEditAbout ? "" : "disabled"}>
                     <option value="enabled" ${String(item.Status).toLowerCase() === "enabled" ? "selected" : ""}>enabled</option>
                     <option value="disabled" ${String(item.Status).toLowerCase() === "disabled" ? "selected" : ""}>disabled</option>
                 </select>
-                <input type="file" name="image" accept="image/*">
+                <input type="file" name="image" accept="image/*" ${canEditAbout ? "" : "disabled"}>
                 <div class="updates-file-meta">
                     <strong>Stored file:</strong> ${escapeHtml(item.image_path || "No file uploaded")}
                 </div>
@@ -437,8 +501,8 @@ function renderAboutList(sectionName, mountId) {
                     alt="${escapeHtml(item.title)}"
                 >
                 <div class="compact-actions">
-                    <button class="btn" type="submit" data-save-about="${escapeHtml(item.id)}" hidden>Save Section</button>
-                    <button class="btn-ghost" type="button" data-discard-about="${escapeHtml(item.id)}" hidden>Discard</button>
+                    ${canEditAbout ? `<button class="btn" type="submit" data-save-about="${escapeHtml(item.id)}" hidden>Save Section</button>` : ``}
+                    ${canEditAbout ? `<button class="btn-ghost" type="button" data-discard-about="${escapeHtml(item.id)}" hidden>Discard</button>` : ``}
                 </div>
             </form>
         `).join("")
@@ -472,12 +536,12 @@ function renderContactList() {
                 data-initial-image-url="${escapeHtml(item.image_path ? getStoragePublicUrl("Food-Website-Storage", `Contact/${item.image_path}`) : "")}"
             >
                 <div><strong>${escapeHtml(item.Stage || item.stage || `Contact ${item.id}`)}</strong> ${createStatusTag(item.status || "disabled")}</div>
-                <input type="text" name="title" value="${escapeHtml(item.title || "")}" placeholder="Title">
-                <select name="status">
+                <input type="text" name="title" value="${escapeHtml(item.title || "")}" placeholder="Title" ${canManageFooter ? "" : "disabled"}>
+                <select name="status" ${canManageFooter ? "" : "disabled"}>
                     <option value="enabled" ${String(item.status).toLowerCase() === "enabled" ? "selected" : ""}>enabled</option>
                     <option value="disabled" ${String(item.status).toLowerCase() === "disabled" ? "selected" : ""}>disabled</option>
                 </select>
-                <input type="file" name="image" accept="image/*">
+                <input type="file" name="image" accept="image/*" ${canManageFooter ? "" : "disabled"}>
                 <div class="updates-file-meta">
                     <strong>Stored file:</strong> ${escapeHtml(item.image_path || "No file uploaded")}
                 </div>
@@ -487,8 +551,8 @@ function renderContactList() {
                     alt="${escapeHtml(item.title || "Contact image")}"
                 >
                 <div class="compact-actions">
-                    <button class="btn" type="submit" data-save-contact="${escapeHtml(item.id)}" hidden>Save Contact</button>
-                    <button class="btn-ghost" type="button" data-discard-contact="${escapeHtml(item.id)}" hidden>Discard</button>
+                    ${canManageFooter ? `<button class="btn" type="submit" data-save-contact="${escapeHtml(item.id)}" hidden>Save Contact</button>` : ``}
+                    ${canManageFooter ? `<button class="btn-ghost" type="button" data-discard-contact="${escapeHtml(item.id)}" hidden>Discard</button>` : ``}
                 </div>
             </form>
         `).join("")
@@ -521,8 +585,8 @@ function renderCategoryList() {
                             <strong>${escapeHtml(item.category_name || "Unnamed category")}</strong>
                             <p class="muted">Update the category label or replace the display image used on the home page.</p>
                         </div>
-                        <input type="text" name="category_name" value="${escapeHtml(item.category_name || "")}" placeholder="Category name" required>
-                        <input type="file" name="display_image" accept="image/*">
+                        <input type="text" name="category_name" value="${escapeHtml(item.category_name || "")}" placeholder="Category name" required ${canManageCategories ? "" : "disabled"}>
+                        <input type="file" name="display_image" accept="image/*" ${canManageCategories ? "" : "disabled"}>
                         <div class="updates-file-meta"><strong>Stored file:</strong> ${escapeHtml(item.display_image || "No image")}</div>
                     </div>
                     <div class="category-preview-card">
@@ -533,8 +597,8 @@ function renderCategoryList() {
                     </div>
                 </div>
                 <div class="compact-actions category-actions">
-                    <button class="btn" type="submit">Save Category</button>
-                    <button class="btn-danger" type="button" data-delete-category="${escapeHtml(item.id ?? item.category_name)}" data-file="${escapeHtml(item.display_image || "")}">Delete</button>
+                    ${canManageCategories ? `<button class="btn" type="submit">Save Category</button>` : ``}
+                    ${canManageCategories ? `<button class="btn-danger" type="button" data-delete-category="${escapeHtml(item.id ?? item.category_name)}" data-file="${escapeHtml(item.display_image || "")}">Delete</button>` : ``}
                 </div>
             </form>
         `).join("")
@@ -563,16 +627,16 @@ function renderLoaderList() {
                 <form class="list-item loader-logo-form" data-loader-item-key="${escapeHtml(getLoaderItemDomKey(item, index))}">
                     ${renderLoaderItemPreview(item)}
                     <div class="loader-logo-fields">
-                        <input type="text" name="label" value="${escapeHtml(item.label || "")}" placeholder="Logo name" required>
-                        <input type="text" name="fileName" value="${escapeHtml(item.fileName || "")}" placeholder="SVG file name" required>
-                        <input type="color" name="color" value="${escapeHtml(normalizeHexColor(item.color, "#f7a600"))}">
+                        <input type="text" name="label" value="${escapeHtml(item.label || "")}" placeholder="Logo name" required ${canManageLoader ? "" : "disabled"}>
+                        <input type="text" name="fileName" value="${escapeHtml(item.fileName || "")}" placeholder="SVG file name" required ${canManageLoader ? "" : "disabled"}>
+                        <input type="color" name="color" value="${escapeHtml(normalizeHexColor(item.color, "#f7a600"))}" ${canManageLoader ? "" : "disabled"}>
                         <div class="updates-file-meta">Keep this filename matched with the SVG you upload manually in GitHub.</div>
                     </div>
                     <div class="compact-actions">
-                        <button class="btn-secondary" type="submit">Save</button>
+                        ${canManageLoader ? `<button class="btn-secondary" type="submit">Save</button>` : ``}
                         <a class="btn-ghost" href="${LOADER_GITHUB_URL}" target="_blank" rel="noopener noreferrer">Replace Icon</a>
-                        <button class="btn-ghost" type="button" data-cancel-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Cancel</button>
-                        <button class="btn-danger" type="button" data-delete-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Delete</button>
+                        ${canManageLoader ? `<button class="btn-ghost" type="button" data-cancel-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Cancel</button>` : ``}
+                        ${canManageLoader ? `<button class="btn-danger" type="button" data-delete-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Delete</button>` : ``}
                     </div>
                 </form>
             ` : `
@@ -584,8 +648,8 @@ function renderLoaderList() {
                         <div class="updates-file-meta">Color ${escapeHtml(item.color || "")}</div>
                     </div>
                     <div class="compact-actions">
-                        <button class="btn-secondary" type="button" data-edit-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Edit</button>
-                        <button class="btn-danger" type="button" data-delete-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Delete</button>
+                        ${canManageLoader ? `<button class="btn-secondary" type="button" data-edit-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Edit</button>` : ``}
+                        ${canManageLoader ? `<button class="btn-danger" type="button" data-delete-loader-item="${escapeHtml(getLoaderItemDomKey(item, index))}">Delete</button>` : ``}
                     </div>
                 </div>
             `}
@@ -755,9 +819,11 @@ async function addHeroSlide(event) {
     }
 
     const fileName = fileNameWithTimestamp(imageFile);
+    let uploadedPath = "";
 
     try {
-        await uploadToStorage("Food-Website-Storage", `Slider Images/${fileName}`, imageFile);
+        uploadedPath = `Slider Images/${fileName}`;
+        await uploadToStorage("Food-Website-Storage", uploadedPath, imageFile);
 
         const { error } = await supabase
             .from("hero_slider")
@@ -774,6 +840,13 @@ async function addHeroSlide(event) {
         await loadUpdateData();
     } catch (error) {
         console.error(error);
+        if (uploadedPath) {
+            try {
+                await removeFromStorage("Food-Website-Storage", uploadedPath);
+            } catch (cleanupError) {
+                console.error(cleanupError);
+            }
+        }
         showToast(error.message || "Unable to add slide", "error");
     }
 }
@@ -789,9 +862,11 @@ async function addCategoryRow(event) {
     }
 
     const fileName = fileNameWithTimestamp(imageFile);
+    let uploadedPath = "";
 
     try {
-        await uploadToStorage("Food-Website-Storage", `category/${fileName}`, imageFile);
+        uploadedPath = `category/${fileName}`;
+        await uploadToStorage("Food-Website-Storage", uploadedPath, imageFile);
         const { error } = await supabase
             .from("category")
             .insert([{ category_name: name, display_image: fileName }]);
@@ -803,6 +878,13 @@ async function addCategoryRow(event) {
         await loadUpdateData();
     } catch (error) {
         console.error(error);
+        if (uploadedPath) {
+            try {
+                await removeFromStorage("Food-Website-Storage", uploadedPath);
+            } catch (cleanupError) {
+                console.error(cleanupError);
+            }
+        }
         showToast(error.message || "Unable to add category", "error");
     }
 }
@@ -816,14 +898,13 @@ async function saveCategoryRow(event) {
     const currentImage = form.dataset.currentImage || "";
     const imageFile = form.elements.display_image.files[0];
     let fileName = currentImage;
+    let uploadedPath = "";
 
     try {
         if (imageFile) {
             fileName = fileNameWithTimestamp(imageFile);
-            await uploadToStorage("Food-Website-Storage", `category/${fileName}`, imageFile);
-            if (currentImage && currentImage !== fileName) {
-                await removeFromStorage("Food-Website-Storage", `category/${currentImage}`);
-            }
+            uploadedPath = `category/${fileName}`;
+            await uploadToStorage("Food-Website-Storage", uploadedPath, imageFile);
         }
 
         const payload = {
@@ -839,10 +920,21 @@ async function saveCategoryRow(event) {
 
         if (error) throw error;
 
+        if (imageFile && currentImage && currentImage !== fileName) {
+            await removeFromStorage("Food-Website-Storage", `category/${currentImage}`);
+        }
+
         showToast("Category updated");
         await loadUpdateData();
     } catch (error) {
         console.error(error);
+        if (uploadedPath) {
+            try {
+                await removeFromStorage("Food-Website-Storage", uploadedPath);
+            } catch (cleanupError) {
+                console.error(cleanupError);
+            }
+        }
         showToast(error.message || "Unable to update category", "error");
     }
 }
@@ -1017,6 +1109,30 @@ async function deleteLoaderItem(domKey) {
 
 async function saveLoaderConfig(config) {
     const nextConfig = normalizeLoaderConfig(config);
+    const payload = setAppConfigLoaderValue({
+        ...(appConfig || {}),
+        ...(appConfig?.id ? { id: appConfig.id } : {})
+    }, appConfig, nextConfig);
+
+    const query = appConfig?.id
+        ? supabase.from("app_config").update(payload).eq("id", appConfig.id)
+        : supabase.from("app_config").insert([payload]).select().single();
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    if (data) {
+        appConfig = data;
+    } else if (!appConfig?.id) {
+        await loadUpdateData();
+        return;
+    } else {
+        appConfig = {
+            ...(appConfig || {}),
+            ...payload
+        };
+    }
+
     loaderConfigState = nextConfig;
     setLoaderBaseConfig(nextConfig);
 }
@@ -1041,7 +1157,7 @@ function normalizeLoaderFileName(value) {
 }
 
 function getStoredLoaderConfig(configRow) {
-    return normalizeLoaderConfig(loaderConfigState);
+    return normalizeLoaderConfig(configRow?.loader ?? configRow?.Loader ?? loaderConfigState);
 }
 
 async function copyLoaderConfigToClipboard() {
@@ -1167,15 +1283,13 @@ async function saveHeroSlide(event) {
     const imageFile = form.elements.image.files[0];
 
     let fileName = oldFileName || null;
+    let uploadedPath = "";
 
     try {
         if (imageFile) {
             fileName = fileNameWithTimestamp(imageFile);
-            await uploadToStorage("Food-Website-Storage", `Slider Images/${fileName}`, imageFile);
-
-            if (oldFileName && oldFileName !== fileName) {
-                await removeFromStorage("Food-Website-Storage", `Slider Images/${oldFileName}`);
-            }
+            uploadedPath = `Slider Images/${fileName}`;
+            await uploadToStorage("Food-Website-Storage", uploadedPath, imageFile);
         }
 
         const payload = {
@@ -1191,11 +1305,22 @@ async function saveHeroSlide(event) {
 
         if (error) throw error;
 
+        if (imageFile && oldFileName && oldFileName !== fileName) {
+            await removeFromStorage("Food-Website-Storage", `Slider Images/${oldFileName}`);
+        }
+
         showToast("Hero slide updated");
         editingHeroSlideId = null;
         await loadUpdateData();
     } catch (error) {
         console.error(error);
+        if (uploadedPath) {
+            try {
+                await removeFromStorage("Food-Website-Storage", uploadedPath);
+            } catch (cleanupError) {
+                console.error(cleanupError);
+            }
+        }
         showToast(error.message || "Unable to update slide", "error");
     }
 }
